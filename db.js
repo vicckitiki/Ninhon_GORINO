@@ -10,7 +10,7 @@ const STORAGE_KEY_ACTIVE_USER = "nd_active_user_v1";
 
 // Caso queira deixar a URL do seu Firebase fixa no GitHub para seu amigo não precisar colar,
 // basta preencher abaixo (ex: "https://seu-projeto-default-rtdb.firebaseio.com")
-const DEFAULT_FIREBASE_URL = "https://ninhou-65d0d-default-rtdb.firebaseio.com";
+const DEFAULT_FIREBASE_URL = "";
 
 /**
  * Estrutura vazia ultracompacta de um jogador (~80 bytes)
