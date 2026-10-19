@@ -6,24 +6,22 @@
 const App = {
   currentTab: "dashboard",
 
-  // Estado da Sessão de Alfabeto
   alphaSession: {
     pool: [],
     queue: [],
     index: 0,
     hits: 0,
     misses: 0,
-    mistakes: [], // [{ item, userAnswer }]
+    mistakes: [],
     startTime: 0,
-    mode: "mixed", // "mixed" | "input" | "choice"
+    mode: "mixed",
     currentQuestionType: "input",
     awaitingNext: false
   },
 
-  // Estado da Sessão de Vocabulário
   vocabSession: {
     scriptType: "hiragana",
-    mode: "jp_to_pt", // "jp_to_pt" | "pt_to_jp"
+    mode: "jp_to_pt",
     pool: [],
     queue: [],
     index: 0,
@@ -32,11 +30,7 @@ const App = {
     awaitingNext: false
   },
 
-  /**
-   * Inicialização geral do aplicativo
-   */
   async init() {
-    // Inscreve a interface para reagir a qualquer mudança no NihongoDB (Local ou Firebase)
     window.NihongoDB.subscribe((data, activeUser, syncStatus) => {
       this.renderHeader(data, activeUser, syncStatus);
       if (this.currentTab === "dashboard") {
@@ -49,14 +43,10 @@ const App = {
     this.renderDashboard();
   },
 
-  /**
-   * Atalhos globais de teclado (Enter confirma e avança para a próxima questão)
-   */
   bindKeyboardShortcuts() {
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
 
-      // Atalho na Arena de Alfabeto
       const alphaQuizVisible = !document.getElementById("alpha-quiz-panel").classList.contains("hidden");
       if (this.currentTab === "alphabet" && alphaQuizVisible) {
         e.preventDefault();
@@ -68,7 +58,6 @@ const App = {
         return;
       }
 
-      // Atalho na Arena de Vocabulário
       const vocabQuizVisible = !document.getElementById("vocab-quiz-panel").classList.contains("hidden");
       if (this.currentTab === "vocab" && vocabQuizVisible) {
         e.preventDefault();
@@ -81,9 +70,6 @@ const App = {
     });
   },
 
-  /**
-   * Atualiza cabeçalho (Jogador ativo, Streak e Status Firebase)
-   */
   renderHeader(data, activeUser, syncStatus) {
     const u1Name = data.u1?.n || "Jogador 1";
     const u2Name = data.u2?.n || "Jogador 2";
@@ -102,11 +88,9 @@ const App = {
       btnU1.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white";
     }
 
-    // Streak do usuário ativo
     const activeStreak = data[activeUser]?.s?.[2] || 0;
     document.getElementById("header-streak").textContent = activeStreak;
 
-    // Indicador de Sincronização Firebase
     const dot = document.getElementById("sync-dot");
     const label = document.getElementById("sync-label");
 
@@ -125,16 +109,10 @@ const App = {
     }
   },
 
-  /**
-   * Alterna entre Jogador 1 (u1) e Jogador 2 (u2)
-   */
   switchUser(userKey) {
     window.NihongoDB.setActiveUser(userKey);
   },
 
-  /**
-   * Permite renomear o jogador ativo
-   */
   promptRenameUser() {
     const activeKey = window.NihongoDB.activeUser;
     const currentName = window.NihongoDB.data[activeKey].n;
@@ -144,9 +122,6 @@ const App = {
     }
   },
 
-  /**
-   * Navegação entre as 3 Abas Principais
-   */
   switchTab(tabName) {
     this.currentTab = tabName;
     ["dashboard", "alphabet", "vocab"].forEach(t => {
@@ -166,9 +141,6 @@ const App = {
     }
   },
 
-  /* ==========================================================================
-   * ABA 1: DASHBOARD COMPARATIVO (VOCÊ VS AMIGO) & RECOMENDAÇÕES SRS
-   * ========================================================================== */
   renderDashboard() {
     const metrics = window.NihongoDB.getComparisonMetrics();
     const activeKey = window.NihongoDB.activeUser;
@@ -177,7 +149,6 @@ const App = {
     document.getElementById("dash-active-name").textContent = activeProfile.name;
     document.getElementById("rec-user-name").textContent = activeProfile.name;
 
-    // Títulos e Cards de Comparação (u1 vs u2)
     document.getElementById("vs-u1-title").textContent = metrics.u1.name;
     document.getElementById("vs-u2-title").textContent = metrics.u2.name;
 
@@ -191,7 +162,6 @@ const App = {
       document.getElementById(`card-${uk}-mastered`).textContent = m.masteredCount;
     });
 
-    // Barras Comparativas por Categoria
     const catDefs = [
       { key: "hiragana", label: "Hiragana (あ)" },
       { key: "katakana", label: "Katakana (ア)" },
@@ -223,7 +193,6 @@ const App = {
 
     document.getElementById("comparison-bars-container").innerHTML = barsHtml;
 
-    // Recomendações Inteligentes e Pontos Fracos do Jogador Ativo
     const recs = window.NihongoDB.getRecommendations(activeKey);
     const weakContainer = document.getElementById("weak-items-list");
 
@@ -254,7 +223,6 @@ const App = {
       }).join("");
     }
 
-    // Novos Vocabulários Sugeridos
     const unseenContainer = document.getElementById("unseen-vocab-list");
     unseenContainer.innerHTML = recs.unseenVocab.map(v => `
       <div onclick="NihongoData.speakJapanese('${v.word}')" class="cursor-pointer bg-slate-900/80 hover:bg-slate-800 border border-slate-800 rounded-xl p-3 flex items-center justify-between transition">
@@ -267,9 +235,6 @@ const App = {
     `).join("");
   },
 
-  /**
-   * Inicia um treino imediato focado nos erros do usuário ativo
-   */
   startWeakPointsDrill() {
     const recs = window.NihongoDB.getRecommendations(window.NihongoDB.activeUser);
     const alphaWeak = recs.weakItems.filter(x => !x.isVocab);
@@ -290,15 +255,11 @@ const App = {
       document.getElementById("alpha-quiz-panel").classList.remove("hidden");
       this.renderAlphabetQuestion();
     } else {
-      // Se ainda tem poucos erros, inicia uma sessão rápida inteligente de 15 símbolos
       document.getElementById("sel-alpha-limit").value = "15";
       this.startAlphabetSession();
     }
   },
 
-  /* ==========================================================================
-   * ABA 2: MOTOR DE TREINO DE ALFABETO (HIRAGANA, KATAKANA, KANJI POR NÍVEL)
-   * ========================================================================== */
   toggleKanjiLevelsVisibility() {
     const isKanjiChecked = document.getElementById("chk-alpha-kanji").checked;
     const box = document.getElementById("kanji-levels-box");
@@ -367,7 +328,6 @@ const App = {
     s.awaitingNext = false;
     const item = s.queue[s.index];
 
-    // Atualiza barra de progresso e etiqueta de tipo
     const total = s.queue.length;
     const currentNum = s.index + 1;
     document.getElementById("alpha-progress-text").textContent = `${currentNum} / ${total}`;
@@ -377,13 +337,11 @@ const App = {
     const typeLabels = { hiragana: "Hiragana", katakana: "Katakana", kanji: "Kanji" };
     badge.textContent = typeLabels[item.type] || "Kana";
 
-    // Decide se a questão atual será Digitação (Input) ou Múltipla Escolha (ex: Mostrar "Ki" e escolher き)
     if (s.mode === "input") {
       s.currentQuestionType = "input";
     } else if (s.mode === "choice") {
       s.currentQuestionType = "choice";
     } else {
-      // No modo misto, ~35% das questões são de múltipla escolha reversa
       s.currentQuestionType = Math.random() < 0.35 ? "choice" : "input";
     }
 
@@ -398,7 +356,6 @@ const App = {
     const audioBtn = document.getElementById("alpha-btn-audio");
 
     if (s.currentQuestionType === "input") {
-      // Exibe o símbolo japonês e pede a sílaba em Romaji
       instruction.textContent = "Digite a sílaba/leitura correspondente em Romaji:";
       mainDisplay.textContent = item.symbol;
       audioBtn.classList.remove("hidden");
@@ -419,7 +376,6 @@ const App = {
       document.getElementById("alpha-submit-btn").disabled = false;
       setTimeout(() => romajiInput.focus(), 40);
     } else {
-      // Múltipla Escolha: Mostra a sílaba em Romaji (ex: "Ki") e dá 4 partículas/símbolos para escolher
       instruction.textContent = "Escolha a partícula/símbolo correto para a sílaba:";
       mainDisplay.textContent = item.romaji.toUpperCase();
       audioBtn.classList.add("hidden");
@@ -434,7 +390,6 @@ const App = {
       inputContainer.classList.add("hidden");
       choiceContainer.classList.remove("hidden");
 
-      // Gera 3 distratores do mesmo tipo de escrita (ou do pool geral)
       const sameTypePool = s.pool.filter(x => x.type === item.type && x.id !== item.id);
       const fallbackPool = s.pool.filter(x => x.id !== item.id);
       const sourceDistractors = sameTypePool.length >= 3 ? sameTypePool : fallbackPool;
@@ -483,7 +438,6 @@ const App = {
     const isCorrect = chosenId === item.id;
     const chosenItem = s.pool.find(x => x.id === chosenId);
 
-    // Desabilita botões de escolha após clicar
     const buttons = document.querySelectorAll("#alpha-choice-container button");
     buttons.forEach(btn => { btn.disabled = true; });
 
@@ -498,19 +452,14 @@ const App = {
       s.hits += 1;
     } else {
       s.misses += 1;
-      // Registra no relatório de erros da sessão (evitando duplicatas do mesmo símbolo)
       if (!s.mistakes.some(m => m.item.id === item.id)) {
         s.mistakes.push({ item, userAnswer });
       }
     }
 
-    // Registra no banco local + fila do Firebase
     window.NihongoDB.recordAttempt(item.id, item.type, isCorrect);
-
-    // Pronuncia automaticamente o símbolo correto
     window.NihongoData.speakJapanese(item.symbol);
 
-    // Mostra feedback visual e dica mnemônica
     const box = document.getElementById("alpha-feedback-box");
     const title = document.getElementById("alpha-feedback-title");
     const hint = document.getElementById("alpha-feedback-hint");
@@ -602,9 +551,6 @@ const App = {
     document.getElementById("alpha-setup-panel").classList.remove("hidden");
   },
 
-  /* ==========================================================================
-   * ABA 3: MOTOR DE VOCABULÁRIO (MODO 1: JP->PT e MODO 2: PT->JP COM BLOCOS)
-   * ========================================================================== */
   startVocabSession() {
     const scriptRadio = document.querySelector('input[name="vocab-script"]:checked');
     const modeRadio = document.querySelector('input[name="vocab-mode"]:checked');
@@ -673,12 +619,10 @@ const App = {
     document.getElementById("vocab-feedback-box").classList.add("hidden");
 
     if (s.mode === "jp_to_pt") {
-      // Modo 1: Mostra a palavra em Japonês -> Pede Romaji + Significado em Português
       promptDisplay.textContent = item.word;
       step2PtBox.classList.remove("hidden");
       step2JpBox.classList.add("hidden");
     } else {
-      // Modo 2: Mostra a palavra em Português -> Pede Romaji + Escrita no Alfabeto Escolhido
       promptDisplay.textContent = `"${item.primaryMeaning}"`;
       step2PtBox.classList.add("hidden");
       step2JpBox.classList.remove("hidden");
@@ -688,12 +632,8 @@ const App = {
     setTimeout(() => romajiInput.focus(), 40);
   },
 
-  /**
-   * Monta os blocos clicáveis com os caracteres da palavra japonesa + distratores do mesmo alfabeto
-   */
   renderVocabTilePicker(item) {
     const correctChars = Array.from(item.word);
-    // Coleta outros caracteres do mesmo sistema de escrita para embaralhar junto
     const otherChars = [];
     this.vocabSession.pool.forEach(v => {
       if (v.id !== item.id) {
@@ -719,3 +659,143 @@ const App = {
   appendVocabJpChar(char) {
     if (this.vocabSession.awaitingNext) return;
     const jpInput = document.getElementById("vocab-input-jp");
+    jpInput.value += char;
+    jpInput.focus();
+  },
+
+  clearVocabJpInput() {
+    if (this.vocabSession.awaitingNext) return;
+    const jpInput = document.getElementById("vocab-input-jp");
+    jpInput.value = "";
+    jpInput.focus();
+  },
+
+  playCurrentVocabAudio() {
+    const item = this.vocabSession.queue[this.vocabSession.index];
+    if (item) window.NihongoData.speakJapanese(item.word);
+  },
+
+  submitVocabAnswer() {
+    const s = this.vocabSession;
+    if (s.awaitingNext) return;
+
+    const item = s.queue[s.index];
+    const romajiInput = document.getElementById("vocab-input-romaji");
+    const ptInput = document.getElementById("vocab-input-pt");
+    const jpInput = document.getElementById("vocab-input-jp");
+
+    const userRomaji = window.NihongoData.normalizeText(romajiInput.value);
+    if (!userRomaji) {
+      romajiInput.focus();
+      return;
+    }
+
+    const romajiCorrect = userRomaji === window.NihongoData.normalizeText(item.romaji);
+    let step2Correct = false;
+
+    if (s.mode === "jp_to_pt") {
+      if (!ptInput.value.trim()) {
+        ptInput.focus();
+        return;
+      }
+      step2Correct = window.NihongoData.checkPortugueseMeaning(ptInput.value, item.meanings);
+    } else {
+      if (!jpInput.value.trim()) {
+        jpInput.focus();
+        return;
+      }
+      step2Correct = jpInput.value.trim() === item.word;
+    }
+
+    const isFullSuccess = romajiCorrect && step2Correct;
+    s.awaitingNext = true;
+
+    romajiInput.disabled = true;
+    ptInput.disabled = true;
+    jpInput.disabled = true;
+    document.getElementById("vocab-submit-btn").disabled = true;
+
+    if (isFullSuccess) {
+      s.hits += 1;
+    } else {
+      s.misses += 1;
+    }
+
+    window.NihongoDB.recordAttempt(item.id, "vocab", isFullSuccess);
+    window.NihongoData.speakJapanese(item.word);
+
+    const box = document.getElementById("vocab-feedback-box");
+    const title = document.getElementById("vocab-feedback-title");
+    const detail = document.getElementById("vocab-feedback-detail");
+
+    box.classList.remove("hidden");
+    if (isFullSuccess) {
+      box.className = "rounded-xl p-4 text-sm space-y-1.5 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
+      title.innerHTML = `✅ Perfeito! <span class="jp-font font-black text-lg ml-1">${item.word}</span> (${item.romaji}) = <strong>${item.primaryMeaning}</strong>`;
+    } else {
+      box.className = "rounded-xl p-4 text-sm space-y-1.5 border bg-rose-950/40 border-rose-500/40 text-rose-200";
+      const rStatus = romajiCorrect ? "✅ Romaji correto" : `❌ Romaji certo: <strong>${item.romaji}</strong>`;
+      const s2Status = s.mode === "jp_to_pt"
+        ? (step2Correct ? "✅ Tradução correta" : `❌ Tradução certa: <strong>${item.meanings.join(" / ")}</strong>`)
+        : (step2Correct ? "✅ Escrita JP correta" : `❌ Escrita certa: <span class="jp-font font-black text-base">${item.word}</span>`);
+      title.innerHTML = `${rStatus} &nbsp;|&nbsp; ${s2Status}`;
+    }
+    detail.innerHTML = `💡 Dica de estrutura: ${item.hint}`;
+
+    document.getElementById("vocab-next-btn").focus();
+  },
+
+  nextVocabQuestion() {
+    this.vocabSession.index += 1;
+    this.renderVocabQuestion();
+  },
+
+  resetVocabView() {
+    window.NihongoDB.commitSession();
+    document.getElementById("vocab-quiz-panel").classList.add("hidden");
+    document.getElementById("vocab-setup-panel").classList.remove("hidden");
+  },
+
+  openSyncModal() {
+    document.getElementById("input-firebase-url").value = window.NihongoDB.firebaseUrl || "";
+    document.getElementById("modal-sync").classList.remove("hidden");
+  },
+
+  closeSyncModal() {
+    document.getElementById("modal-sync").classList.add("hidden");
+  },
+
+  async saveFirebaseUrl() {
+    const url = document.getElementById("input-firebase-url").value;
+    try {
+      await window.NihongoDB.setFirebaseConfig(url);
+      this.closeSyncModal();
+    } catch (e) {
+      alert(e.message || "URL inválida.");
+    }
+  },
+
+  exportBackup() {
+    const json = window.NihongoDB.exportJSON();
+    navigator.clipboard.writeText(json).then(() => {
+      alert("Código compacto de progresso copiado para a área de transferência!");
+    }).catch(() => {
+      prompt("Copie o código abaixo:", json);
+    });
+  },
+
+  async importBackup() {
+    const raw = prompt("Cole aqui o código JSON compacto exportado:");
+    if (!raw) return;
+    try {
+      await window.NihongoDB.importJSON(raw);
+      alert("Progresso importado e sincronizado com sucesso!");
+      this.closeSyncModal();
+    } catch (e) {
+      alert("Erro ao importar: verifique se o código JSON está completo.");
+    }
+  }
+};
+
+window.App = App;
+window.addEventListener("DOMContentLoaded", () => App.init());
