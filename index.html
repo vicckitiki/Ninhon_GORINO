@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nihongo Duo — Estudo Competitivo de Japonês</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter + Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            jp: ['"Noto Sans JP"', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0b0f19;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+    .jp-font {
+      font-family: 'Noto Sans JP', sans-serif;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .tab-active {
+      background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 15px -3px rgba(225, 29, 72, 0.45);
+    }
+    .char-tile {
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .char-tile:active {
+      transform: scale(0.93);
+    }
+    @keyframes pulse-fast {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+    .sync-pulse {
+      animation: pulse-fast 1.2s infinite;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-rose-600 selection:text-white">
+
+  <!-- BARRA DE TOPO: PERFIS + STREAK + SYNC FIREBASE -->
+  <header class="sticky top-0 z-30 glass-card border-b border-slate-800/80">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Logo & Título -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-600 to-amber-500 flex items-center justify-center shadow-lg shadow-rose-600/20">
+          <span class="jp-font font-black text-xl text-white">日</span>
+        </div>
+        <div>
+          <h1 class="font-extrabold text-lg tracking-tight leading-none flex items-center gap-2">
+            Nihongo <span class="text-rose-500">Duo</span>
+          </h1>
+          <p class="text-xs text-slate-400">Kana, Kanji & Vocabulário Competitivo</p>
+        </div>
+      </div>
+
+      <!-- Seletor de Jogador (Você vs Amigo) + Editar Nome -->
+      <div class="flex items-center gap-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+        <button id="btn-user-u1" onclick="App.switchUser('u1')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          <span id="label-u1-name">Jogador 1</span>
+        </button>
+        <button id="btn-user-u2" onclick="App.switchUser('u2')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+          <span id="label-u2-name">Jogador 2</span>
+        </button>
+        <button onclick="App.promptRenameUser()" title="Renomear jogador ativo" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+          ✏️
+        </button>
+      </div>
+
+      <!-- Indicadores: Ofensiva (Streak) + Status Firebase -->
+      <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 px-3 py-1.5 rounded-xl text-xs font-bold" title="Ofensiva de dias seguidos do jogador ativo">
+          <span>🔥</span>
+          <span id="header-streak">0</span>
+          <span class="hidden sm:inline">dias</span>
+        </div>
+
+        <button onclick="App.openSyncModal()" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+          <span id="sync-dot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+          <span id="sync-label">Local</span>
+          <span>⚙️</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- NAVEGAÇÃO PRINCIPAL POR ABAS -->
+  <nav class="max-w-6xl mx-auto w-full px-4 pt-5">
+    <div class="grid grid-cols-3 gap-2 sm:gap-3 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+      <button id="tab-btn-dashboard" onclick="App.switchTab('dashboard')" class="tab-active py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
+        <span>🏆</span>
+        <span>Duelo & Desempenho</span>
+      </button>
+      <button id="tab-btn-alphabet" onclick="App.switchTab('alphabet')" class="text-slate-300 hover:text-white py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
+        <span class="jp-font font-bold">あ</span>
+        <span>Treinar Alfabeto</span>
+      </button>
+      <button id="tab-btn-vocab" onclick="App.switchTab('vocab')" class="text-slate-300 hover:text-white py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
+        <span class="jp-font font-bold">語</span>
+        <span>Treinar Vocabulário</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="max-w-6xl mx-auto w-full px-4 py-6 flex-1 space-y-6">
+
+    <!-- ==========================================
+         ABA 1: DASHBOARD COMPARATIVO & RECOMENDAÇÕES
+         ========================================== -->
+    <section id="view-dashboard" class="space-y-6">
+      
+      <!-- Cabeçalho de Boas-Vindas & Resumo Rápido -->
+      <div class="glass-card rounded-2xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider text-rose-400">Painel de Controle</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold mt-0.5">
+            Jogando como: <span id="dash-active-name" class="text-rose-500">Jogador 1</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            O algoritmo rastreia seus erros e prioriza automaticamente os símbolos e vocabulários mais difíceis.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2.5 w-full md:w-auto">
+          <button onclick="App.startWeakPointsDrill()" class="flex-1 md:flex-initial bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2">
+            <span>⚡</span>
+            <span>Revisar Meus Erros</span>
+          </button>
+          <button onclick="App.switchTab('alphabet')" class="flex-1 md:flex-initial bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition border border-slate-700">
+            Novo Treino
+          </button>
+        </div>
+      </div>
+
+      <!-- Placar Head-to-Head (Você vs Amigo) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Card Comparativo Direto -->
+        <div class="glass-card rounded-2xl p-5 sm:p-6 space-y-5">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-base sm:text-lg flex items-center gap-2">
+              <span>⚔️</span> Comparativo: <span id="vs-u1-title" class="text-rose-400">Jogador 1</span> vs <span id="vs-u2-title" class="text-sky-400">Jogador 2</span>
+            </h3>
+            <button onclick="NihongoDB.pullFromFirebase()" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
+              🔄 Atualizar
+            </button>
+          </div>
+
+          <!-- Métricas Gerais Lado a Lado -->
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Coluna Jogador 1 -->
+            <div class="bg-slate-900/90 border border-rose-500/30 rounded-xl p-4 space-y-2">
+              <div class="flex items-center justify-between">
+                <span id="card-u1-name" class="font-bold text-rose-400 text-sm">Jogador 1</span>
+                <span id="card-u1-streak" class="text-xs bg-rose-500/10 text-rose-300 px-2 py-0.5 rounded-md font-semibold">🔥 0d</span>
+              </div>
+              <div class="text-2xl sm:text-3xl font-black" id="card-u1-acc">0%</div>
+              <div class="text-[11px] text-slate-400">Precisão Geral</div>
+              <div class="pt-2 border-t border-slate-800 flex justify-between text-xs">
+                <span class="text-emerald-400 font-semibold" id="card-u1-hits">0 acertos</span>
+                <span class="text-rose-400 font-semibold" id="card-u1-misses">0 erros</span>
+              </div>
+              <div class="text-xs text-slate-300 font-medium pt-1">
+                🏅 Dominados: <strong id="card-u1-mastered" class="text-white">0</strong> itens
+              </div>
+            </div>
+
+            <!-- Coluna Jogador 2 -->
+            <div class="bg-slate-900/90 border border-sky-500/30 rounded-xl p-4 space-y-2">
+              <div class="flex items-center justify-between">
+                <span id="card-u2-name" class="font-bold text-sky-400 text-sm">Jogador 2</span>
+                <span id="card-u2-streak" class="text-xs bg-sky-500/10 text-sky-300 px-2 py-0.5 rounded-md font-semibold">🔥 0d</span>
+              </div>
+              <div class="text-2xl sm:text-3xl font-black" id="card-u2-acc">0%</div>
+              <div class="text-[11px] text-slate-400">Precisão Geral</div>
+              <div class="pt-2 border-t border-slate-800 flex justify-between text-xs">
+                <span class="text-emerald-400 font-semibold" id="card-u2-hits">0 acertos</span>
+                <span class="text-rose-400 font-semibold" id="card-u2-misses">0 erros</span>
+              </div>
+              <div class="text-xs text-slate-300 font-medium pt-1">
+                🏅 Dominados: <strong id="card-u2-mastered" class="text-white">0</strong> itens
+              </div>
+            </div>
+          </div>
+
+          <!-- Barras Comparativas por Categoria -->
+          <div class="space-y-3 pt-2" id="comparison-bars-container">
+            <!-- Preenchido via JS (Hiragana, Katakana, Kanji, Vocabulário) -->
+          </div>
+        </div>
+
+        <!-- Card de Recomendações Inteligentes & Pontos Fracos -->
+        <div class="glass-card rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-5">
+          <div class="space-y-4">
+            <div>
+              <h3 class="font-bold text-base sm:text-lg flex items-center gap-2">
+                <span>🎯</span> Radar de Melhoria & Sugestões
+              </h3>
+              <p class="text-xs text-slate-400">
+                Baseado no histórico de erros de <strong id="rec-user-name" class="text-slate-200">Jogador 1</strong>:
+              </p>
+            </div>
+
+            <!-- Lista de Pontos Fracos -->
+            <div>
+              <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
+                ⚠️ Símbolos & Palavras que mais exigem atenção
+              </h4>
+              <div id="weak-items-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+
+            <!-- Sugestão de Novos Vocabulários -->
+            <div class="pt-2">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 mb-2">
+                ✨ Novos Vocabulários Recomendados para Hoje
+              </h4>
+              <div id="unseen-vocab-list" class="grid grid-cols-2 gap-2.5">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 text-xs text-slate-400 flex items-center justify-between gap-3">
+            <span>💡 Clique em qualquer caractere japonês nos cards para ouvir a pronúncia nativa.</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================
+         ABA 2: TREINO DE ALFABETO (KANA & KANJI)
+         ========================================== -->
+    <section id="view-alphabet" class="hidden space-y-6">
+
+      <!-- TELA 2A: CONFIGURADOR DO TREINO DE ALFABETO -->
+      <div id="alpha-setup-panel" class="glass-card rounded-2xl p-5 sm:p-7 space-y-6">
+        <div class="border-b border-slate-800 pb-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-rose-400">Módulo 1</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold mt-0.5">Configurar Sessão de Alfabeto</h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            Escolha 1, 2 ou os 3 alfabetos. O treino mistura escrita de Romaji e questões de múltipla escolha!
+          </p>
+        </div>
+
+        <!-- Escolha dos 3 Alfabetos -->
+        <div class="space-y-3">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-300">1. Selecione os Alfabetos (1, 2 ou 3)</label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            
+            <label class="cursor-pointer bg-slate-900/90 hover:bg-slate-900 border-2 border-slate-800 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-950/20 rounded-xl p-4 flex items-center gap-3.5 transition">
+              <input type="checkbox" id="chk-alpha-hira" checked onchange="App.toggleKanjiLevelsVisibility()" class="w-5 h-5 accent-rose-600 rounded" />
+              <div>
+                <div class="font-bold text-sm sm:text-base flex items-center gap-2">
+                  <span class="jp-font text-lg text-rose-400">あ</span> Hiragana
+                </div>
+                <div class="text-xs text-slate-400">Silabário nativo essencial</div>
+              </div>
+            </label>
+
+            <label class="cursor-pointer bg-slate-900/90 hover:bg-slate-900 border-2 border-slate-800 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-950/20 rounded-xl p-4 flex items-center gap-3.5 transition">
+              <input type="checkbox" id="chk-alpha-kata" onchange="App.toggleKanjiLevelsVisibility()" class="w-5 h-5 accent-sky-500 rounded" />
+              <div>
+                <div class="font-bold text-sm sm:text-base flex items-center gap-2">
+                  <span class="jp-font text-lg text-sky-400">ア</span> Katakana
+                </div>
+                <div class="text-xs text-slate-400">Palavras estrangeiras & ênfase</div>
+              </div>
+            </label>
+
+            <label class="cursor-pointer bg-slate-900/90 hover:bg-slate-900 border-2 border-slate-800 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-950/20 rounded-xl p-4 flex items-center gap-3.5 transition">
+              <input type="checkbox" id="chk-alpha-kanji" onchange="App.toggleKanjiLevelsVisibility()" class="w-5 h-5 accent-amber-500 rounded" />
+              <div>
+                <div class="font-bold text-sm sm:text-base flex items-center gap-2">
+                  <span class="jp-font text-lg text-amber-400">漢</span> Kanji (Por Nível)
+                </div>
+                <div class="text-xs text-slate-400">Ideogramas delimitados</div>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- Expansões de Kana (Dakuten & Yoon) -->
+        <div class="space-y-2">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-300">2. Variações de Sílabas (Opcional para Hiragana/Katakana)</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="cursor-pointer bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+              <input type="checkbox" id="chk-alpha-dakuten" class="w-4 h-4 accent-rose-600" />
+              <div class="text-xs sm:text-sm">
+                <strong class="text-slate-200">Incluir Dakuten / Handakuten</strong>
+                <span class="block text-slate-400 text-xs">ga, gi, za, ji, da, ba, pa... (25 sílabas)</span>
+              </div>
+            </label>
+            <label class="cursor-pointer bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
+              <input type="checkbox" id="chk-alpha-yoon" class="w-4 h-4 accent-rose-600" />
+              <div class="text-xs sm:text-sm">
+                <strong class="text-slate-200">Incluir Yoon (Combinações)</strong>
+                <span class="block text-slate-400 text-xs">kya, sha, cha, nya, ryo, ja... (33 sílabas)</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Delimitação de Níveis de Kanji (Exibido quando Kanji está marcado) -->
+        <div id="kanji-levels-box" class="hidden bg-amber-500/5 border border-amber-500/30 rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-amber-400">
+              3. Delimitação de Níveis de Kanji (Evita sobrecarga)
+            </label>
+            <span class="text-[11px] text-amber-300/80">Escolha 1 ou mais pacotes</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl1" checked />
+              <span><strong>Nível 1:</strong> Números & Quantidades (一, 二, 三... 十)</span>
+            </label>
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl2" />
+              <span><strong>Nível 2:</strong> Natureza & Elementos (日, 月, 火, 水, 木...)</span>
+            </label>
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl3" />
+              <span><strong>Nível 3:</strong> Pessoas & Posições (人, 口, 大, 小, 上, 下...)</span>
+            </label>
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl4" />
+              <span><strong>Nível 4:</strong> Escola & Verbos JLPT N5 (本, 学, 生, 食, 見...)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Limite de Questões e Modo de Pergunta -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Tamanho da Fila</label>
+            <select id="sel-alpha-limit" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-500">
+              <option value="15">Rápido (15 símbolos priorizados por IA)</option>
+              <option value="30">Médio (30 símbolos priorizados por IA)</option>
+              <option value="all" selected>Alfabeto Completo Selecionado (Todos os símbolos)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Formato das Questões</label>
+            <select id="sel-alpha-mode" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-500">
+              <option value="mixed" selected>Misto: Digitar Romaji + Múltipla Escolha (ex: "Ki" → き)</option>
+              <option value="input">Apenas Digitação em Romaji</option>
+              <option value="choice">Apenas Múltipla Escolha de Partículas/Símbolos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end">
+          <button onclick="App.startAlphabetSession()" class="w-full sm:w-auto bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-extrabold px-8 py-3.5 rounded-xl text-sm sm:text-base shadow-lg shadow-rose-600/30 transition">
+            🚀 Iniciar Desafio de Alfabeto
+          </button>
+        </div>
+      </div>
+
+      <!-- TELA 2B: ARENA DE TREINO DE ALFABETO -->
+      <div id="alpha-quiz-panel" class="hidden glass-card rounded-2xl p-5 sm:p-8 max-w-2xl mx-auto space-y-6">
+        
+        <!-- Topo do Quiz: Progresso e Botão Sair -->
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <span id="alpha-badge-type" class="text-xs font-bold uppercase px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300">Hiragana</span>
+            <span id="alpha-progress-text" class="text-xs font-bold text-slate-400">1 / 46</span>
+          </div>
+          <button onclick="App.finishAlphabetSession()" class="text-xs text-slate-400 hover:text-white bg-slate-800 px-3 py-1.5 rounded-lg">
+            Encerrar e Ver Relatório ✕
+          </button>
+        </div>
+
+        <!-- Barra de Progresso -->
+        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div id="alpha-progress-bar" class="h-full bg-rose-500 transition-all duration-300" style="width: 5%"></div>
+        </div>
+
+        <!-- Área Principal da Pergunta -->
+        <div class="text-center py-4 space-y-2">
+          <p id="alpha-question-instruction" class="text-xs sm:text-sm text-slate-400 font-medium">
+            Digite a sílaba correspondente em Romaji:
+          </p>
+          <div class="flex items-center justify-center gap-3">
+            <div id="alpha-main-display" class="jp-font text-6xl sm:text-7xl font-black text-white py-3 select-all">
+              あ
+            </div>
+            <button id="alpha-btn-audio" onclick="App.playCurrentAlphaAudio()" title="Ouvir pronúncia" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-lg transition">
+              🔊
+            </button>
+          </div>
+          <p id="alpha-kanji-meaning" class="text-sm font-semibold text-amber-400 hidden"></p>
+        </div>
+
+        <!-- MODO A: Input Direto em Romaji -->
+        <div id="alpha-input-container" class="space-y-3">
+          <div class="flex gap-2">
+            <input type="text" id="alpha-romaji-input" autocomplete="off" autocapitalize="off" spellcheck="false"
+              placeholder="Ex: ka, shi, tsu..."
+              class="flex-1 bg-slate-900 border-2 border-slate-700 focus:border-rose-500 rounded-xl px-4 py-3 text-center text-lg font-bold text-white focus:outline-none" />
+            <button id="alpha-submit-btn" onclick="App.submitAlphabetInput()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl transition">
+              Confirmar
+            </button>
+          </div>
+        </div>
+
+        <!-- MODO B: Múltipla Escolha (Mostrar "Ki" e escolher o símbolo certo) -->
+        <div id="alpha-choice-container" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <!-- Botões gerados via JS -->
+        </div>
+
+        <!-- Feedback Instantâneo + Dica Mnemônica -->
+        <div id="alpha-feedback-box" class="hidden rounded-xl p-4 text-sm space-y-1 border">
+          <div id="alpha-feedback-title" class="font-bold"></div>
+          <div id="alpha-feedback-hint" class="text-xs text-slate-300"></div>
+          <div class="pt-2 flex justify-end">
+            <button id="alpha-next-btn" onclick="App.nextAlphabetQuestion()" class="bg-slate-100 hover:bg-white text-slate-900 font-bold px-4 py-1.5 rounded-lg text-xs">
+              Próximo (Enter) ➔
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TELA 2C: DASHBOARD DE DESEMPENHO PÓS-TREINO DE ALFABETO -->
+      <div id="alpha-report-panel" class="hidden glass-card rounded-2xl p-5 sm:p-8 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Relatório da Sessão</span>
+            <h2 class="text-2xl font-extrabold mt-0.5">Dashboard de Desempenho no Alfabeto</h2>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="App.resetAlphabetView()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm">
+              ⚙️ Configurar Novo
+            </button>
+            <button onclick="App.retryAlphabetMistakes()" id="btn-retry-alpha-errors" class="hidden bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm">
+              🔥 Refazer Apenas os Erros
+            </button>
+          </div>
+        </div>
+
+        <!-- Cards de Resumo da Sessão -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
+            <div class="text-2xl sm:text-3xl font-black text-emerald-400" id="rep-alpha-acc">0%</div>
+            <div class="text-xs text-slate-400 mt-1">Precisão</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
+            <div class="text-2xl sm:text-3xl font-black text-white" id="rep-alpha-hits">0</div>
+            <div class="text-xs text-slate-400 mt-1">Acertos</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
+            <div class="text-2xl sm:text-3xl font-black text-rose-400" id="rep-alpha-misses">0</div>
+            <div class="text-xs text-slate-400 mt-1">Erros</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
+            <div class="text-2xl sm:text-3xl font-black text-amber-400" id="rep-alpha-time">0.0s</div>
+            <div class="text-xs text-slate-400 mt-1">Tempo Médio / Símbolo</div>
+          </div>
+        </div>
+
+        <!-- Diagnóstico e Dicas de Melhoria -->
+        <div class="space-y-3">
+          <h3 class="font-bold text-base flex items-center gap-2">
+            <span>💡</span> Dicas de Melhoria & Análise de Erros da Sessão
+          </h3>
+          <div id="rep-alpha-tips-list" class="space-y-2.5">
+            <!-- Preenchido via JS -->
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==========================================
+         ABA 3: TREINO DE VOCABULÁRIO (MODOS 1 E 2)
+         ========================================== -->
+    <section id="view-vocab" class="hidden space-y-6">
+
+      <!-- TELA 3A: CONFIGURADOR DE VOCABULÁRIO -->
+      <div id="vocab-setup-panel" class="glass-card rounded-2xl p-5 sm:p-7 space-y-6">
+        <div class="border-b border-slate-800 pb-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Módulo 2</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold mt-0.5">Treino de Vocabulário Duplo</h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            Escolha primeiro o alfabeto das palavras e depois o sentido da tradução/escrita.
+          </p>
+        </div>
+
+        <!-- Passo 1: Escolha entre os 3 Alfabetos antes de entregar as palavras -->
+        <div class="space-y-3">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-300">
+            1. Escolha o Sistema de Escrita das Palavras
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-950/20 rounded-xl p-4 flex items-center gap-3">
+              <input type="radio" name="vocab-script" value="hiragana" checked class="w-4 h-4 accent-rose-600" />
+              <div>
+                <div class="font-bold text-sm sm:text-base"><span class="jp-font text-rose-400">みず</span> — Hiragana</div>
+                <div class="text-xs text-slate-400">20 palavras essenciais</div>
+              </div>
+            </label>
+
+            <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-950/20 rounded-xl p-4 flex items-center gap-3">
+              <input type="radio" name="vocab-script" value="katakana" class="w-4 h-4 accent-sky-500" />
+              <div>
+                <div class="font-bold text-sm sm:text-base"><span class="jp-font text-sky-400">コーヒー</span> — Katakana</div>
+                <div class="text-xs text-slate-400">20 palavras do cotidiano</div>
+              </div>
+            </label>
+
+            <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-950/20 rounded-xl p-4 flex items-center gap-3">
+              <input type="radio" name="vocab-script" value="kanji" class="w-4 h-4 accent-amber-500" />
+              <div>
+                <div class="font-bold text-sm sm:text-base"><span class="jp-font text-amber-400">先生</span> — Kanji</div>
+                <div class="text-xs text-slate-400">20 compostos JLPT N5</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Passo 2: Escolha da Modalidade de Vocabulário -->
+        <div class="space-y-3">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-300">
+            2. Escolha o Modo de Exercício
+          </label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <!-- Opção 1: Japonês -> Romaji + Português -->
+            <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-950/20 rounded-xl p-4 flex items-start gap-3.5">
+              <input type="radio" name="vocab-mode" value="jp_to_pt" checked class="w-5 h-5 mt-1 accent-emerald-500" />
+              <div class="space-y-1">
+                <div class="font-bold text-sm sm:text-base text-white">
+                  Modo 1: Japonês ➔ Romaji + Português
+                </div>
+                <p class="text-xs text-slate-400">
+                  Apresenta a palavra japonesa (ex: <span class="jp-font text-slate-200">ねこ</span>). Você escreve a leitura em Romaji (<code class="text-emerald-400">neko</code>) e o significado em Português (<code class="text-emerald-400">gato</code>).
+                </p>
+              </div>
+            </label>
+
+            <!-- Opção 2: Português -> Romaji + Alfabeto Escolhido -->
+            <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-purple-500 has-[:checked]:bg-purple-950/20 rounded-xl p-4 flex items-start gap-3.5">
+              <input type="radio" name="vocab-mode" value="pt_to_jp" class="w-5 h-5 mt-1 accent-purple-500" />
+              <div class="space-y-1">
+                <div class="font-bold text-sm sm:text-base text-white">
+                  Modo 2: Português ➔ Romaji + Alfabeto Japonês
+                </div>
+                <p class="text-xs text-slate-400">
+                  Apresenta a palavra em Português (ex: <strong>"Água"</strong>). Você escreve em Romaji (<code class="text-purple-400">mizu</code>) e monta a palavra no alfabeto escolhido (<span class="jp-font text-slate-200">みず</span>) usando o teclado ou os blocos na tela!
+                </p>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+        <div class="pt-2 flex justify-end">
+          <button onclick="App.startVocabSession()" class="w-full sm:w-auto bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold px-8 py-3.5 rounded-xl text-sm sm:text-base shadow-lg shadow-sky-600/30 transition">
+            📚 Iniciar Treino de Vocabulário
+          </button>
+        </div>
+      </div>
+
+      <!-- TELA 3B: ARENA DE TREINO DE VOCABULÁRIO -->
+      <div id="vocab-quiz-panel" class="hidden glass-card rounded-2xl p-5 sm:p-8 max-w-2xl mx-auto space-y-6">
+        
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <span id="vocab-badge-info" class="text-xs font-bold uppercase px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300">Hiragana</span>
+            <span id="vocab-progress-text" class="text-xs font-bold text-slate-400">1 / 12</span>
+          </div>
+          <button onclick="App.resetVocabView()" class="text-xs text-slate-400 hover:text-white bg-slate-800 px-3 py-1.5 rounded-lg">
+            Voltar ✕
+          </button>
+        </div>
+
+        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div id="vocab-progress-bar" class="h-full bg-sky-500 transition-all duration-300" style="width: 8%"></div>
+        </div>
+
+        <!-- Palavra-Alvo Exibida -->
+        <div class="text-center py-3 space-y-2">
+          <span id="vocab-category-tag" class="text-[11px] uppercase tracking-wider font-bold text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-full">Categoria</span>
+          <div class="flex items-center justify-center gap-3">
+            <div id="vocab-prompt-display" class="jp-font text-4xl sm:text-5xl font-black text-white py-2">
+              みず
+            </div>
+            <button id="vocab-btn-audio" onclick="App.playCurrentVocabAudio()" title="Ouvir pronúncia japonesa" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-lg transition">
+              🔊
+            </button>
+          </div>
+        </div>
+
+        <!-- Campos Duplos de Resposta -->
+        <div class="space-y-4">
+          <!-- Passo 1 (Comum aos 2 modos): Escrever em Romaji -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+              Passo 1: Escreva em Romaji (Alfabeto Romano)
+            </label>
+            <input type="text" id="vocab-input-romaji" autocomplete="off" autocapitalize="off" spellcheck="false"
+              placeholder="Ex: mizu, neko, sensei..."
+              class="w-full bg-slate-900 border-2 border-slate-700 focus:border-sky-500 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none" />
+          </div>
+
+          <!-- Passo 2 (Modo 1): Significado em Português -->
+          <div id="vocab-step2-pt-box">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+              Passo 2: Significado em Português
+            </label>
+            <input type="text" id="vocab-input-pt" autocomplete="off" spellcheck="false"
+              placeholder="Ex: água, gato, professor..."
+              class="w-full bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none" />
+          </div>
+
+          <!-- Passo 2 (Modo 2): Escrever no Alfabeto Japonês Escolhido + Construtor de Blocos -->
+          <div id="vocab-step2-jp-box" class="hidden space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold uppercase tracking-wider text-purple-300">
+                Passo 2: Escreva no Alfabeto Japonês Escolhido
+              </label>
+              <button type="button" onclick="App.clearVocabJpInput()" class="text-xs text-slate-400 hover:text-rose-400">
+                Limpar ⌫
+              </button>
+            </div>
+            <input type="text" id="vocab-input-jp" autocomplete="off" spellcheck="false"
+              placeholder="Clique nos blocos abaixo ou digite em japonês..."
+              class="jp-font w-full bg-slate-900 border-2 border-purple-500/50 focus:border-purple-400 rounded-xl px-4 py-2.5 text-xl font-bold text-white text-center focus:outline-none" />
+            
+            <!-- Teclado Assistido de Blocos (Para quem não tem IME Japonês instalado) -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-2">
+              <div class="text-[11px] text-slate-400 flex justify-between">
+                <span>🧩 Construtor de Caracteres (Clique nas sílabas na ordem certa):</span>
+              </div>
+              <div id="vocab-tile-picker" class="flex flex-wrap gap-2 justify-center pt-1">
+                <!-- Blocos gerados via JS -->
+              </div>
+            </div>
+          </div>
+
+          <button id="vocab-submit-btn" onclick="App.submitVocabAnswer()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-extrabold py-3 rounded-xl transition shadow-lg shadow-sky-600/25">
+            Verificar Resposta Dupla
+          </button>
+        </div>
+
+        <!-- Feedback da Questão de Vocabulário -->
+        <div id="vocab-feedback-box" class="hidden rounded-xl p-4 text-sm space-y-1.5 border">
+          <div id="vocab-feedback-title" class="font-bold"></div>
+          <div id="vocab-feedback-detail" class="text-xs text-slate-200"></div>
+          <div class="pt-2 flex justify-end">
+            <button id="vocab-next-btn" onclick="App.nextVocabQuestion()" class="bg-slate-100 hover:bg-white text-slate-900 font-bold px-4 py-1.5 rounded-lg text-xs">
+              Próxima Palavra (Enter) ➔
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- MODAL DE CONFIGURAÇÃO DO FIREBASE & BACKUP COMPACTO -->
+  <div id="modal-sync" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-lg w-full p-6 space-y-5 border border-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-extrabold text-lg flex items-center gap-2">
+          <span>☁️</span> Sincronização Firebase & Backup
+        </h3>
+        <button onclick="App.closeSyncModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm text-slate-300">
+        <p>
+          Para sincronizar seu placar e o do seu amigo em tempo real com <strong>consumo mínimo (~1 KB)</strong>, cole abaixo a URL do seu <strong>Firebase Realtime Database</strong>:
+        </p>
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-400 mb-1">URL do Realtime Database</label>
+          <input type="url" id="input-firebase-url" placeholder="https://seu-projeto-default-rtdb.firebaseio.com"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500" />
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 text-[11px] text-slate-400 space-y-1">
+          <div class="font-bold text-slate-300">Como criar em 1 minuto (Grátis):</div>
+          <p>1. Acesse <em>console.firebase.google.com</em> ➔ Crie um projeto ➔ <strong>Realtime Database</strong>.</p>
+          <p>2. Inicie no <strong>Modo de Teste</strong> (regras <code class="text-emerald-400">.read: true, .write: true</code>) e copie o link HTTPS gerado.</p>
+        </div>
+        <button onclick="App.saveFirebaseUrl()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm transition">
+          Salvar e Sincronizar Nuvem
+        </button>
+      </div>
+
+      <div class="border-t border-slate-800 pt-4 space-y-2">
+        <div class="text-xs font-bold uppercase text-slate-400">Backup Manual em Código (JSON Compacto)</div>
+        <div class="flex gap-2">
+          <button onclick="App.exportBackup()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2 rounded-xl text-xs border border-slate-700">
+            📋 Copiar Código de Progresso
+          </button>
+          <button onclick="App.importBackup()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-2 rounded-xl text-xs border border-slate-700">
+            📥 Importar Código
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS DO PROJETO (Passos 1, 2 e 4) -->
+  <script src="data.js"></script>
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
