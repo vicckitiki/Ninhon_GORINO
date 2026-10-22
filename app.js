@@ -1,27 +1,33 @@
 /**
- * NIHONGO DUO - PASSO 4: app.js
- * Motor principal de interface, sessões de treino, validação dupla e relatórios.
+ * NIHONGO DUO - app.js (Versão Completa Unificada)
+ * Inclui:
+ * - Dashboard Comparativo (Você vs Amigo) + Radar SRS
+ * - Modo Katakana -> Escrever em Hiragana (caractere japonês direto + teclado de blocos)
+ * - Suporte a Kanjis JLPT N5 a N1 (+2.136 Jōyō Kanjis) com fatiamento em Lotes de 25
+ * - Treino de Vocabulário Duplo (JP->PT e PT->JP com construtor de blocos)
  */
 
 const App = {
   currentTab: "dashboard",
 
+  // Estado da Sessão de Alfabeto
   alphaSession: {
     pool: [],
     queue: [],
     index: 0,
     hits: 0,
     misses: 0,
-    mistakes: [],
+    mistakes: [], // [{ item, userAnswer }]
     startTime: 0,
-    mode: "mixed",
+    mode: "mixed", // "mixed" | "input" | "choice" | "kata_to_hira"
     currentQuestionType: "input",
     awaitingNext: false
   },
 
+  // Estado da Sessão de Vocabulário
   vocabSession: {
     scriptType: "hiragana",
-    mode: "jp_to_pt",
+    mode: "jp_to_pt", // "jp_to_pt" | "pt_to_jp"
     pool: [],
     queue: [],
     index: 0,
@@ -30,6 +36,9 @@ const App = {
     awaitingNext: false
   },
 
+  /**
+   * Inicialização geral do aplicativo
+   */
   async init() {
     window.NihongoDB.subscribe((data, activeUser, syncStatus) => {
       this.renderHeader(data, activeUser, syncStatus);
@@ -41,24 +50,43 @@ const App = {
     this.bindKeyboardShortcuts();
     await window.NihongoDB.init();
     this.renderDashboard();
+
+    // Carrega os +2.136 Jōyō Kanjis (N5 a N1) em segundo plano se a função existir no data.js
+    if (typeof window.NihongoData.loadFullJLPTKanji === "function") {
+      window.NihongoData.loadFullJLPTKanji().then((loaded) => {
+        this.updateKanjiCountsUI(loaded);
+        this.updateKanjiBatchOptions();
+      });
+    } else {
+      this.updateKanjiCountsUI(false);
+      this.updateKanjiBatchOptions();
+    }
   },
 
+  /**
+   * Atalhos globais de teclado (Enter confirma e avança para a próxima questão)
+   */
   bindKeyboardShortcuts() {
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
 
-      const alphaQuizVisible = !document.getElementById("alpha-quiz-panel").classList.contains("hidden");
+      const alphaQuizPanel = document.getElementById("alpha-quiz-panel");
+      const alphaQuizVisible = alphaQuizPanel && !alphaQuizPanel.classList.contains("hidden");
       if (this.currentTab === "alphabet" && alphaQuizVisible) {
         e.preventDefault();
         if (this.alphaSession.awaitingNext) {
           this.nextAlphabetQuestion();
-        } else if (this.alphaSession.currentQuestionType === "input") {
+        } else if (
+          this.alphaSession.currentQuestionType === "input" ||
+          this.alphaSession.currentQuestionType === "kata_to_hira"
+        ) {
           this.submitAlphabetInput();
         }
         return;
       }
 
-      const vocabQuizVisible = !document.getElementById("vocab-quiz-panel").classList.contains("hidden");
+      const vocabQuizPanel = document.getElementById("vocab-quiz-panel");
+      const vocabQuizVisible = vocabQuizPanel && !vocabQuizPanel.classList.contains("hidden");
       if (this.currentTab === "vocab" && vocabQuizVisible) {
         e.preventDefault();
         if (this.vocabSession.awaitingNext) {
@@ -70,6 +98,9 @@ const App = {
     });
   },
 
+  /**
+   * Atualiza cabeçalho (Jogador ativo, Streak e Status Firebase)
+   */
   renderHeader(data, activeUser, syncStatus) {
     const u1Name = data.u1?.n || "Jogador 1";
     const u2Name = data.u2?.n || "Jogador 2";
@@ -141,6 +172,9 @@ const App = {
     }
   },
 
+  /* ==========================================================================
+   * ABA 1: DASHBOARD COMPARATIVO (VOCÊ VS AMIGO) & RECOMENDAÇÕES SRS
+   * ========================================================================== */
   renderDashboard() {
     const metrics = window.NihongoDB.getComparisonMetrics();
     const activeKey = window.NihongoDB.activeUser;
@@ -260,22 +294,93 @@ const App = {
     }
   },
 
+  /* ==========================================================================
+   * ABA 2: MOTOR DE TREINO DE ALFABETO (KANA, KATA->HIRA E KANJI JLPT N5-N1)
+   * ========================================================================== */
   toggleKanjiLevelsVisibility() {
     const isKanjiChecked = document.getElementById("chk-alpha-kanji").checked;
     const box = document.getElementById("kanji-levels-box");
+    if (!box) return;
     if (isKanjiChecked) {
       box.classList.remove("hidden");
+      this.updateKanjiBatchOptions();
     } else {
       box.classList.add("hidden");
     }
   },
 
+  /**
+   * Atualiza os contadores de Kanji de N5 a N1 na interface
+   */
+  updateKanjiCountsUI(fullLoaded) {
+    const statusEl = document.getElementById("kanji-db-status");
+    let totalKanji = 0;
+    ["n5", "n4", "n3", "n2", "n1"].forEach(lvl => {
+      const count = window.RAW_KANJI_LEVELS?.[lvl]?.items?.length || 0;
+      totalKanji += count;
+      const el = document.getElementById(`count-kanji-${lvl}`);
+      if (el && count > 0) {
+        el.textContent = `${count} Kanjis disponíveis neste nível`;
+      }
+    });
+    if (statusEl && totalKanji > 0) {
+      statusEl.textContent = fullLoaded
+        ? `✅ Base Jōyō Completa Ativa (${totalKanji} Kanjis N5–N1)`
+        : `⚡ Base Local Ativa (${totalKanji} Kanjis)`;
+    }
+  },
+
+  /**
+   * Gera os Lotes de 25 em 25 Kanjis para não sobrecarregar o estudo nos níveis grandes (N3, N2, N1)
+   */
+  updateKanjiBatchOptions() {
+    const batchSelect = document.getElementById("sel-kanji-batch");
+    if (!batchSelect) return;
+
+    const selectedLevels = Array.from(document.querySelectorAll(".chk-kanji-lvl:checked")).map(el => el.value);
+    let totalSelected = 0;
+    selectedLevels.forEach(lvl => {
+      totalSelected += (window.RAW_KANJI_LEVELS?.[lvl]?.items?.length || 0);
+    });
+
+    const batchSize = 25;
+    let html = `<option value="all">Sortear entre todos os ${totalSelected} Kanjis marcados (Smart Queue)</option>`;
+    for (let i = 0; i < totalSelected; i += batchSize) {
+      const end = Math.min(i + batchSize, totalSelected);
+      const loteNum = Math.floor(i / batchSize) + 1;
+      html += `<option value="${i}-${end}">Lote ${loteNum}: Kanjis ${i + 1} até ${end}</option>`;
+    }
+    batchSelect.innerHTML = html;
+  },
+
+  /**
+   * Ajusta automaticamente os checkboxes quando o usuário escolhe o modo Katakana -> Hiragana
+   */
+  onAlphaModeChange() {
+    const mode = document.getElementById("sel-alpha-mode").value;
+    if (mode === "kata_to_hira") {
+      document.getElementById("chk-alpha-kata").checked = true;
+      document.getElementById("chk-alpha-hira").checked = false;
+      document.getElementById("chk-alpha-kanji").checked = false;
+      this.toggleKanjiLevelsVisibility();
+    }
+  },
+
   startAlphabetSession() {
-    const hiragana = document.getElementById("chk-alpha-hira").checked;
-    const katakana = document.getElementById("chk-alpha-kata").checked;
-    const kanji = document.getElementById("chk-alpha-kanji").checked;
+    const mode = document.getElementById("sel-alpha-mode").value;
+    let hiragana = document.getElementById("chk-alpha-hira").checked;
+    let katakana = document.getElementById("chk-alpha-kata").checked;
+    let kanji = document.getElementById("chk-alpha-kanji").checked;
     const includeDakuten = document.getElementById("chk-alpha-dakuten").checked;
     const includeYoon = document.getElementById("chk-alpha-yoon").checked;
+
+    // No modo Katakana -> Hiragana, garantimos que o pool carregue Katakana
+    if (mode === "kata_to_hira") {
+      katakana = true;
+      hiragana = false;
+      kanji = false;
+      document.getElementById("chk-alpha-kata").checked = true;
+    }
 
     if (!hiragana && !katakana && !kanji) {
       alert("Selecione pelo menos um dos três alfabetos (Hiragana, Katakana ou Kanji)!");
@@ -288,13 +393,19 @@ const App = {
       return;
     }
 
+    const kanjiBatch = document.getElementById("sel-kanji-batch")?.value || "all";
+
     const rawPool = window.NihongoData.getAlphabetPool({
-      hiragana, katakana, kanji, includeDakuten, includeYoon, kanjiLevels
+      hiragana, katakana, kanji, includeDakuten, includeYoon, kanjiLevels, kanjiBatch
     });
+
+    if (!rawPool || rawPool.length === 0) {
+      alert("Nenhum caractere encontrado para os filtros selecionados.");
+      return;
+    }
 
     const limitVal = document.getElementById("sel-alpha-limit").value;
     const maxItems = limitVal === "all" ? null : parseInt(limitVal, 10);
-    const mode = document.getElementById("sel-alpha-mode").value;
 
     const smartQueue = window.NihongoDB.buildSmartQueue(rawPool, maxItems);
 
@@ -307,7 +418,7 @@ const App = {
       mistakes: [],
       startTime: Date.now(),
       mode,
-      currentQuestionType: "input",
+      currentQuestionType: mode === "kata_to_hira" ? "kata_to_hira" : "input",
       awaitingNext: false
     };
 
@@ -335,9 +446,11 @@ const App = {
 
     const badge = document.getElementById("alpha-badge-type");
     const typeLabels = { hiragana: "Hiragana", katakana: "Katakana", kanji: "Kanji" };
-    badge.textContent = typeLabels[item.type] || "Kana";
+    badge.textContent = s.mode === "kata_to_hira" ? "Katakana ➔ Hiragana" : (typeLabels[item.type] || "Kana");
 
-    if (s.mode === "input") {
+    if (s.mode === "kata_to_hira") {
+      s.currentQuestionType = "kata_to_hira";
+    } else if (s.mode === "input") {
       s.currentQuestionType = "input";
     } else if (s.mode === "choice") {
       s.currentQuestionType = "choice";
@@ -350,12 +463,51 @@ const App = {
 
     const inputContainer = document.getElementById("alpha-input-container");
     const choiceContainer = document.getElementById("alpha-choice-container");
+    const hiraPickerBox = document.getElementById("alpha-hira-picker-box");
     const instruction = document.getElementById("alpha-question-instruction");
     const mainDisplay = document.getElementById("alpha-main-display");
     const kanjiMeaningEl = document.getElementById("alpha-kanji-meaning");
     const audioBtn = document.getElementById("alpha-btn-audio");
+    const romajiInput = document.getElementById("alpha-romaji-input");
 
-    if (s.currentQuestionType === "input") {
+    if (s.currentQuestionType === "kata_to_hira") {
+      // MODO KATAKANA -> HIRAGANA (Escrita em caractere japonês, sem Romaji)
+      instruction.innerHTML = "Escreva o caractere <strong class='text-rose-400'>Hiragana</strong> correspondente a este Katakana:";
+      mainDisplay.textContent = item.symbol;
+      audioBtn.classList.remove("hidden");
+      kanjiMeaningEl.classList.add("hidden");
+
+      inputContainer.classList.remove("hidden");
+      choiceContainer.classList.add("hidden");
+
+      romajiInput.value = "";
+      romajiInput.placeholder = "Digite em Hiragana (ex: あ, き, し)...";
+      romajiInput.disabled = false;
+      document.getElementById("alpha-submit-btn").disabled = false;
+
+      if (hiraPickerBox) {
+        hiraPickerBox.classList.remove("hidden");
+        const targetHira = item.hiraganaPair || "";
+        const distractors = s.pool
+          .filter(x => x.id !== item.id && x.hiraganaPair)
+          .sort(() => Math.random() - 0.5)
+          .slice(0, 11)
+          .map(x => x.hiraganaPair);
+
+        const tileOptions = [targetHira, ...distractors].filter(Boolean).sort(() => Math.random() - 0.5);
+        const tilesEl = document.getElementById("alpha-hira-tiles");
+        if (tilesEl) {
+          tilesEl.innerHTML = tileOptions.map(hChar => `
+            <button type="button" onclick="App.selectHiraTile('${hChar}')" class="char-tile jp-font text-xl font-bold bg-slate-800 hover:bg-rose-600 text-white w-11 h-11 rounded-xl border border-slate-700 transition">
+              ${hChar}
+            </button>
+          `).join("");
+        }
+      }
+
+      setTimeout(() => romajiInput.focus(), 40);
+
+    } else if (s.currentQuestionType === "input") {
       instruction.textContent = "Digite a sílaba/leitura correspondente em Romaji:";
       mainDisplay.textContent = item.symbol;
       audioBtn.classList.remove("hidden");
@@ -369,12 +521,14 @@ const App = {
 
       inputContainer.classList.remove("hidden");
       choiceContainer.classList.add("hidden");
+      if (hiraPickerBox) hiraPickerBox.classList.add("hidden");
 
-      const romajiInput = document.getElementById("alpha-romaji-input");
       romajiInput.value = "";
+      romajiInput.placeholder = "Ex: ka, shi, tsu...";
       romajiInput.disabled = false;
       document.getElementById("alpha-submit-btn").disabled = false;
       setTimeout(() => romajiInput.focus(), 40);
+
     } else {
       instruction.textContent = "Escolha a partícula/símbolo correto para a sílaba:";
       mainDisplay.textContent = item.romaji.toUpperCase();
@@ -389,6 +543,7 @@ const App = {
 
       inputContainer.classList.add("hidden");
       choiceContainer.classList.remove("hidden");
+      if (hiraPickerBox) hiraPickerBox.classList.add("hidden");
 
       const sameTypePool = s.pool.filter(x => x.type === item.type && x.id !== item.id);
       const fallbackPool = s.pool.filter(x => x.id !== item.id);
@@ -408,6 +563,16 @@ const App = {
     }
   },
 
+  /**
+   * Preenche o campo quando o usuário clica num bloco de Hiragana na tela
+   */
+  selectHiraTile(hiraChar) {
+    if (this.alphaSession.awaitingNext) return;
+    const inputEl = document.getElementById("alpha-romaji-input");
+    inputEl.value = hiraChar;
+    inputEl.focus();
+  },
+
   playCurrentAlphaAudio() {
     const item = this.alphaSession.queue[this.alphaSession.index];
     if (item) window.NihongoData.speakJapanese(item.symbol);
@@ -418,10 +583,29 @@ const App = {
     if (s.awaitingNext) return;
 
     const inputEl = document.getElementById("alpha-romaji-input");
+    const item = s.queue[s.index];
+
+    if (s.currentQuestionType === "kata_to_hira") {
+      const rawHira = (inputEl.value || "").trim();
+      if (!rawHira) return;
+
+      // Impede que o usuário responda em Romaji neste modo
+      if (/[a-zA-Z]/.test(rawHira)) {
+        alert("Neste modo você deve escrever o caractere em Hiragana (ex: あ, き, し), e não como é falado em Romaji!");
+        inputEl.focus();
+        return;
+      }
+
+      const isCorrect = rawHira === item.hiraganaPair;
+      inputEl.disabled = true;
+      document.getElementById("alpha-submit-btn").disabled = true;
+      this.processAlphabetResult(item, isCorrect, rawHira);
+      return;
+    }
+
     const rawVal = window.NihongoData.normalizeText(inputEl.value);
     if (!rawVal) return;
 
-    const item = s.queue[s.index];
     const isCorrect = item.acceptedRomaji.some(r => window.NihongoData.normalizeText(r) === rawVal);
 
     inputEl.disabled = true;
@@ -465,15 +649,26 @@ const App = {
     const hint = document.getElementById("alpha-feedback-hint");
 
     box.classList.remove("hidden");
-    if (isCorrect) {
-      box.className = "rounded-xl p-4 text-sm space-y-1 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
-      title.innerHTML = `✅ Correto! <span class="jp-font font-black text-lg ml-1">${item.symbol}</span> = <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
-    } else {
-      box.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
-      title.innerHTML = `❌ Resposta certa: <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> = <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong> (Você respondeu: <em>${userAnswer}</em>)`;
-    }
-    hint.textContent = `💡 ${item.hint}`;
 
+    if (s.currentQuestionType === "kata_to_hira") {
+      if (isCorrect) {
+        box.className = "rounded-xl p-4 text-sm space-y-1 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
+        title.innerHTML = `✅ Correto! Katakana <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> ➔ Hiragana <span class="jp-font font-black text-lg mx-1 text-white">${item.hiraganaPair}</span>`;
+      } else {
+        box.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
+        title.innerHTML = `❌ O Hiragana de <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> é <span class="jp-font font-black text-xl mx-1 text-white">${item.hiraganaPair}</span> (Você colocou: <span class="jp-font">${userAnswer}</span>)`;
+      }
+    } else {
+      if (isCorrect) {
+        box.className = "rounded-xl p-4 text-sm space-y-1 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
+        title.innerHTML = `✅ Correto! <span class="jp-font font-black text-lg ml-1">${item.symbol}</span> = <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
+      } else {
+        box.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
+        title.innerHTML = `❌ Resposta certa: <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> = <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong> (Você respondeu: <em>${userAnswer}</em>)`;
+      }
+    }
+
+    hint.textContent = `💡 ${item.hint}`;
     document.getElementById("alpha-next-btn").focus();
   },
 
@@ -506,26 +701,31 @@ const App = {
       retryBtn.classList.add("hidden");
       tipsList.innerHTML = `
         <div class="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-4 text-sm text-emerald-300 font-medium">
-          🏆 Desempenho impecável! Você não errou nenhum caractere nesta sessão. Experimente ativar <strong>Dakuten</strong>, <strong>Yoon</strong> ou avançar um nível de <strong>Kanji</strong>!
+          🏆 Desempenho impecável! Você não errou nenhum caractere nesta sessão. Experimente ativar <strong>Dakuten</strong>, <strong>Yoon</strong> ou avançar um lote/nível de <strong>Kanji</strong>!
         </div>
       `;
     } else {
       retryBtn.classList.remove("hidden");
-      tipsList.innerHTML = s.mistakes.map(({ item, userAnswer }) => `
-        <div onclick="NihongoData.speakJapanese('${item.symbol}')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-800 border border-rose-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
-          <div class="flex items-center gap-4">
-            <span class="jp-font text-3xl font-black text-rose-400 bg-rose-500/10 px-3.5 py-2 rounded-xl">${item.symbol}</span>
-            <div>
-              <div class="font-bold text-sm text-white">
-                Leitura correta: <span class="text-emerald-400">${item.acceptedRomaji.join(" / ").toUpperCase()}</span>
-                <span class="text-xs text-slate-400 ml-2">(Sua resposta: ${userAnswer})</span>
+      tipsList.innerHTML = s.mistakes.map(({ item, userAnswer }) => {
+        const expectedLabel = s.mode === "kata_to_hira" && item.hiraganaPair
+          ? `Hiragana: ${item.hiraganaPair} (${item.romaji.toUpperCase()})`
+          : item.acceptedRomaji.join(" / ").toUpperCase();
+        return `
+          <div onclick="NihongoData.speakJapanese('${item.symbol}')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-800 border border-rose-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition">
+            <div class="flex items-center gap-4">
+              <span class="jp-font text-3xl font-black text-rose-400 bg-rose-500/10 px-3.5 py-2 rounded-xl">${item.symbol}</span>
+              <div>
+                <div class="font-bold text-sm text-white">
+                  Correto: <span class="text-emerald-400 jp-font">${expectedLabel}</span>
+                  <span class="text-xs text-slate-400 ml-2">(Sua resposta: ${userAnswer})</span>
+                </div>
+                <div class="text-xs text-amber-300 mt-1">💡 ${item.hint}</div>
               </div>
-              <div class="text-xs text-amber-300 mt-1">💡 ${item.hint}</div>
             </div>
+            <span class="text-xs text-slate-400 self-end sm:self-center">🔊 Ouvir</span>
           </div>
-          <span class="text-xs text-slate-400 self-end sm:self-center">🔊 Ouvir</span>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
   },
 
@@ -551,6 +751,9 @@ const App = {
     document.getElementById("alpha-setup-panel").classList.remove("hidden");
   },
 
+  /* ==========================================================================
+   * ABA 3: MOTOR DE VOCABULÁRIO (MODO 1: JP->PT e MODO 2: PT->JP COM BLOCOS)
+   * ========================================================================== */
   startVocabSession() {
     const scriptRadio = document.querySelector('input[name="vocab-script"]:checked');
     const modeRadio = document.querySelector('input[name="vocab-mode"]:checked');
@@ -756,6 +959,9 @@ const App = {
     document.getElementById("vocab-setup-panel").classList.remove("hidden");
   },
 
+  /* ==========================================================================
+   * MODAL DE SINCRONIZAÇÃO FIREBASE & BACKUP COMPACTO
+   * ========================================================================== */
   openSyncModal() {
     document.getElementById("input-firebase-url").value = window.NihongoDB.firebaseUrl || "";
     document.getElementById("modal-sync").classList.remove("hidden");
