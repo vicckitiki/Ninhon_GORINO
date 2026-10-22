@@ -41,69 +41,177 @@ const RAW_KANA_YOON = [
 
 // 2. KANJI POR NÍVEIS (Para não sobrecarregar o estudo)
 // Formato: [Id, Caractere, RomajiPrincipal, [RomajisAceitos], SignificadoPT, DicaMnemonica]
+// 2. KANJI POR PROFICIÊNCIA JLPT (N5 ao N1)
+// Formato compacto: [Id, Caractere, RomajiPrincipal, [RomajisAceitos], SignificadoPT, DicaOuNivel]
 const RAW_KANJI_LEVELS = {
-  "lvl1": {
-    name: "Nível 1: Números & Quantidades (10 Kanjis)",
+  "n5": {
+    name: "JLPT N5 — Iniciante (~100 Kanjis essenciais)",
     items: [
-      ["k_1", "一", "ichi", ["ichi", "hito"], "Um", "Um único traço horizontal."],
-      ["k_2", "二", "ni", ["ni", "futa"], "Dois", "Dois traços horizontais paralelos."],
-      ["k_3", "三", "san", ["san", "mi"], "Três", "Três traços horizontais."],
-      ["k_4", "四", "yon", ["yon", "shi", "yo"], "Quatro", "Parece uma janela quadrada com 4 cantos."],
-      ["k_5", "五", "go", ["go", "itsu"], "Cinco", "Cruza linhas entre o céu e a terra."],
-      ["k_6", "六", "roku", ["roku", "mu"], "Seis", "Uma tampa com duas perninhas embaixo."],
-      ["k_7", "七", "nana", ["nana", "shichi"], "Sete", "Parece um 7 invertido cortando uma linha."],
-      ["k_8", "八", "hachi", ["hachi", "ya"], "Oito", "Dois traços que se abrem para o infinito."],
-      ["k_9", "九", "kyuu", ["kyuu", "ku", "kokono"], "Nove", "Lembra alguém dobrando o braço fazendo força."],
-      ["k_10", "十", "juu", ["juu", "too"], "Dez", "Uma cruz completa unindo vertical e horizontal."]
+      ["k_一", "一", "ichi", ["ichi", "hito"], "Um", "JLPT N5 • Traço único horizontal."],
+      ["k_二", "二", "ni", ["ni", "futa"], "Dois", "JLPT N5 • Dois traços paralelos."],
+      ["k_三", "三", "san", ["san", "mi"], "Três", "JLPT N5 • Três traços horizontais."],
+      ["k_四", "四", "yon", ["yon", "shi", "yo"], "Quatro", "JLPT N5 • Janela com 4 cantos."],
+      ["k_五", "五", "go", ["go", "itsu"], "Cinco", "JLPT N5 • Equilíbrio entre céu e terra."],
+      ["k_六", "六", "roku", ["roku", "mu"], "Seis", "JLPT N5 • Topo com duas pernas."],
+      ["k_七", "七", "nana", ["nana", "shichi"], "Sete", "JLPT N5 • Corte transversal."],
+      ["k_八", "八", "hachi", ["hachi", "ya"], "Oito", "JLPT N5 • Dois traços que se abrem."],
+      ["k_九", "九", "kyuu", ["kyuu", "ku", "kokono"], "Nove", "JLPT N5 • Braço flexionado."],
+      ["k_十", "十", "juu", ["juu", "too"], "Dez", "JLPT N5 • Cruz completa."],
+      ["k_百", "百", "hyaku", ["hyaku", "momo"], "Cem", "JLPT N5 • Um (一) sobre branco (白)."],
+      ["k_千", "千", "sen", ["sen", "chi"], "Mil", "JLPT N5 • Dez (十) com um traço no topo."],
+      ["k_万", "万", "man", ["man", "ban"], "Dez Mil", "JLPT N5 • Base das grandes contagens."],
+      ["k_円", "円", "en", ["en", "maru"], "Iene / Círculo", "JLPT N5 • Moeda japonesa."],
+      ["k_日", "日", "nichi", ["hi", "bi", "nichi", "jitsu"], "Sol / Dia", "JLPT N5 • Contorno solar."],
+      ["k_月", "月", "getsu", ["tsuki", "getsu", "gatsu"], "Lua / Mês", "JLPT N5 • Lua crescente."],
+      ["k_火", "火", "ka", ["hi", "ka"], "Fogo", "JLPT N5 • Chamas subindo."],
+      ["k_水", "水", "sui", ["mizu", "sui"], "Água", "JLPT N5 • Correnteza de rio."],
+      ["k_木", "木", "moku", ["ki", "moku", "boku"], "Árvore / Madeira", "JLPT N5 • Tronco, copa e raízes."],
+      ["k_金", "金", "kin", ["kane", "kin", "kon"], "Ouro / Dinheiro", "JLPT N5 • Metal sob o solo."],
+      ["k_土", "土", "do", ["tsuchi", "do", "to"], "Terra / Solo", "JLPT N5 • Broto saindo do chão."],
+      ["k_山", "山", "san", ["yama", "san"], "Montanha", "JLPT N5 • Três picos."],
+      ["k_川", "川", "sen", ["kawa", "sen"], "Rio", "JLPT N5 • Três fluxos de água."],
+      ["k_空", "空", "kuu", ["sora", "kuu", "a"], "Céu / Vazio", "JLPT N5 • Espaço aberto."],
+      ["k_人", "人", "jin", ["hito", "jin", "nin"], "Pessoa", "JLPT N5 • Duas pernas caminhando."],
+      ["k_子", "子", "shi", ["ko", "shi", "su"], "Criança / Filho", "JLPT N5 • Bebê de braços abertos."],
+      ["k_女", "女", "jo", ["onna", "jo", "nyo"], "Mulher", "JLPT N5 • Postura elegante."],
+      ["k_男", "男", "dan", ["otoko", "dan", "nan"], "Homem", "JLPT N5 • Força (力) no campo de arroz (田)."],
+      ["k_目", "目", "moku", ["me", "moku"], "Olho", "JLPT N5 • Pupila na vertical."],
+      ["k_口", "口", "kou", ["kuchi", "kou"], "Boca", "JLPT N5 • Abertura da boca."],
+      ["k_耳", "耳", "ji", ["mimi", "ji"], "Orelha", "JLPT N5 • Desenho da orelha."],
+      ["k_手", "手", "shu", ["te", "shu"], "Mão", "JLPT N5 • Palma e dedos."],
+      ["k_足", "足", "soku", ["ashi", "soku", "ta"], "Pé / Perna", "JLPT N5 • Joelho e pé."],
+      ["k_大", "大", "dai", ["oo", "dai", "tai"], "Grande", "JLPT N5 • Braços abertos."],
+      ["k_小", "小", "shou", ["chii", "ko", "shou"], "Pequeno", "JLPT N5 • Dividido em partes pequenas."],
+      ["k_上", "上", "jou", ["ue", "jou", "a"], "Cima / Subir", "JLPT N5 • Acima da linha."],
+      ["k_下", "下", "ka", ["shita", "ka", "ge", "sa"], "Baixo / Descer", "JLPT N5 • Abaixo da linha."],
+      ["k_中", "中", "chuu", ["naka", "chuu"], "Meio / Dentro", "JLPT N5 • Corte no centro."],
+      ["k_本", "本", "hon", ["hon", "moto"], "Livro / Origem", "JLPT N5 • Raiz da árvore."],
+      ["k_学", "学", "gaku", ["mana", "gaku"], "Estudo / Escola", "JLPT N5 • Criança sob o teto."],
+      ["k_生", "生", "sei", ["i", "nama", "sei", "shou", "u"], "Vida / Nascer", "JLPT N5 • Planta brotando."],
+      ["k_先", "先", "sen", ["saki", "sen"], "Anterior / Futuro", "JLPT N5 • Quem vai à frente."],
+      ["k_行", "行", "kou", ["i", "yu", "kou", "gyou"], "Ir / Linha", "JLPT N5 • Cruzamento."],
+      ["k_来", "来", "rai", ["ku", "ki", "rai"], "Vir / Próximo", "JLPT N5 • Colheita que vem."],
+      ["k_食", "食", "shoku", ["ta", "shoku"], "Comer / Alimento", "JLPT N5 • Refeição sob o teto."],
+      ["k_飲", "飲", "in", ["no", "in"], "Beber", "JLPT N5 • Ingerir líquidos."],
+      ["k_見", "見", "ken", ["mi", "ken"], "Ver / Olhar", "JLPT N5 • Olho sobre pernas."],
+      ["k_聞", "聞", "bun", ["ki", "bun", "mon"], "Ouvir / Perguntar", "JLPT N5 • Orelha no portão."]
     ]
   },
-  "lvl2": {
-    name: "Nível 2: Natureza & Elementos (10 Kanjis)",
+  "n4": {
+    name: "JLPT N4 — Básico (~180 Kanjis do cotidiano)",
     items: [
-      ["k_11", "日", "hi", ["hi", "bi", "nichi", "jitsu"], "Sol / Dia", "O contorno do sol com um brilho no meio."],
-      ["k_12", "月", "tsuki", ["tsuki", "getsu", "gatsu"], "Lua / Mês", "Formato de lua crescente com nuvens no meio."],
-      ["k_13", "火", "hi", ["hi", "ka"], "Fogo", "Uma fogueira com fagulhas saindo dos lados."],
-      ["k_14", "水", "mizu", ["mizu", "sui"], "Água", "Um rio central com respingos nas laterais."],
-      ["k_15", "木", "ki", ["ki", "moku", "boku"], "Árvore / Madeira", "Tronco, galhos horizontais e raízes embaixo."],
-      ["k_16", "金", "kane", ["kane", "kin", "kon"], "Ouro / Dinheiro", "Pepitas de ouro enterradas sob o telhado de uma mina."],
-      ["k_17", "土", "tsuchi", ["tsuchi", "do", "to"], "Terra / Solo", "Uma planta brotando acima da linha do chão."],
-      ["k_18", "山", "yama", ["yama", "san"], "Montanha", "Três picos de uma cordilheira."],
-      ["k_19", "川", "kawa", ["kawa", "sen"], "Rio", "Três correntes de água fluindo lado a lado."],
-      ["k_20", "空", "sora", ["sora", "kuu"], "Céu / Vazio", "O espaço aberto acima de uma caverna."]
+      ["k_会", "会", "kai", ["a", "kai", "e"], "Encontrar / Reunião", "JLPT N4 • Pessoas reunidas sob um teto."],
+      ["k_社", "社", "sha", ["yashiro", "sha"], "Empresa / Santuário", "JLPT N4 • Altar comunitário."],
+      ["k_店", "店", "ten", ["mise", "ten"], "Loja / Estabelecimento", "JLPT N4 • Comércio sob telhado."],
+      ["k_駅", "駅", "eki", ["eki"], "Estação de Trem", "JLPT N4 • Ponto de parada de cavalos/trens."],
+      ["k_道", "道", "dou", ["michi", "dou", "tou"], "Caminho / Estrada", "JLPT N4 • Seguir a direção."],
+      ["k_주", "住", "juu", ["su", "juu"], "Morar / Residir", "JLPT N4 • Pessoa fixada num local."],
+      ["k_所", "所", "sho", ["tokoro", "sho", "jo"], "Lugar / Local", "JLPT N4 • Porta e machado."],
+      ["k_町", "町", "chou", ["machi", "chou"], "Cidade / Bairro", "JLPT N4 • Campos e ruas."],
+      ["k_歩", "歩", "ho", ["aru", "ayumu", "ho", "bu"], "Caminhar / Passo", "JLPT N4 • Parar pouco a pouco."],
+      ["k_走", "走", "sou", ["hashi", "sou"], "Correr", "JLPT N4 • Movimentar os pés rápido."],
+      ["k_待", "待", "tai", ["ma", "tai"], "Esperar", "JLPT N4 • Aguardar na rua/templo."],
+      ["k_持", "持", "ji", ["mo", "ji"], "Segurar / Ter", "JLPT N4 • Mão (扌) junto ao templo (寺)."],
+      ["k_思", "思", "shi", ["omo", "shi"], "Pensar / Achar", "JLPT N4 • Mente/campo (田) e coração (心)."],
+      ["k_知", "知", "chi", ["shi", "chi"], "Saber / Conhecimento", "JLPT N4 • Flecha certeira da fala."],
+      ["k_作", "作", "saku", ["tsuku", "saku", "sa"], "Fazer / Criar / Obra", "JLPT N4 • Pessoa construindo."],
+      ["k_使", "使", "shi", ["tsuka", "shi"], "Usar / Utilizar", "JLPT N4 • Pessoa em missão oficial."],
+      ["k_働", "働", "dou", ["hatara", "dou"], "Trabalhar", "JLPT N4 • Pessoa (亻) em movimento (動)."],
+      ["k_動", "動", "dou", ["ugo", "dou"], "Mover / Movimento", "JLPT N4 • Pesado (重) + Força (力)."],
+      ["k_強", "強", "kyou", ["tsuyo", "kyou", "gou"], "Forte / Estudar", "JLPT N4 • Arco tensionado."],
+      ["k_弱", "弱", "jaku", ["yowa", "jaku"], "Fraco / Frágil", "JLPT N4 • Arcos delicados."],
+      ["k_明", "明", "mei", ["aka", "aki", "mei", "myou"], "Brilhante / Claro", "JLPT N4 • Sol (日) + Lua (月)."],
+      ["k_暗", "暗", "an", ["kura", "an"], "Escuro", "JLPT N4 • Sol encoberto."],
+      ["k_広", "広", "kou", ["hiro", "kou"], "Amplo / Espaçoso", "JLPT N4 • Espaço aberto sob abrigo."],
+      ["k_早", "早", "sou", ["haya", "sou", "sa"], "Cedo / Rápido", "JLPT N4 • Sol nascendo no horizonte."],
+      ["k_친", "親", "shin", ["oya", "shita", "shin"], "Pais / Íntimo", "JLPT N4 • Ver (見) de perto a árvore."],
+      ["k_兄", "兄", "kei", ["ani", "kei", "kyou"], "Irmão Mais Velho", "JLPT N4 • Quem fala à frente."],
+      ["k_姉", "姉", "shi", ["ane", "shi"], "Irmã Mais Velha", "JLPT N4 • Mulher (女) no mercado (市)."],
+      ["k_弟", "弟", "tei", ["otouto", "tei", "dai"], "Irmão Mais Novo", "JLPT N4 • Ordem de sucessão."],
+      ["k_妹", "妹", "mai", ["imouto", "mai"], "Irmã Mais Nova", "JLPT N4 • Mulher (女) ainda jovem (未)."],
+      ["k_医", "医", "i", ["i"], "Medicina / Médico", "JLPT N4 • Cuidado e cura."]
     ]
   },
-  "lvl3": {
-    name: "Nível 3: Pessoas & Cotidiano (10 Kanjis)",
+  "n3": {
+    name: "JLPT N3 — Intermediário (~370 Kanjis de leitura fluida)",
     items: [
-      ["k_21", "人", "hito", ["hito", "jin", "nin"], "Pessoa", "Duas pernas caminhando apoiadas uma na outra."],
-      ["k_22", "口", "kuchi", ["kuchi", "kou"], "Boca", "O formato aberto de uma boca."],
-      ["k_23", "目", "me", ["me", "moku"], "Olho", "Um olho colocado na vertical com a pupila."],
-      ["k_24", "手", "te", ["te", "shu"], "Mão", "Dedos abertos vistos de frente."],
-      ["k_25", "足", "ashi", ["ashi", "soku"], "Pé / Perna", "A rótula do joelho acima dos ossos do pé."],
-      ["k_26", "大", "oo", ["oo", "dai", "tai"], "Grande", "Uma pessoa abrindo os braços e pernas ao máximo."],
-      ["k_27", "小", "chii", ["chii", "ko", "shou"], "Pequeno", "Algo partido em pedacinhos pequenos."],
-      ["k_28", "上", "ue", ["ue", "jou"], "Cima / Acima", "Uma seta apontando acima da linha base."],
-      ["k_29", "下", "shita", ["shita", "ka", "ge"], "Baixo / Abaixo", "Algo pendurado abaixo da linha do teto."],
-      ["k_30", "中", "naka", ["naka", "chuu"], "Meio / Dentro", "Uma linha atravessando exatamente o centro de uma caixa."]
+      ["k_政", "政", "sei", ["matsurigoto", "sei", "shou"], "Política / Governo", "JLPT N3 • Correto (正) + Ação."],
+      ["k_経", "経", "kei", ["he", "ta", "kei", "kyou"], "Economia / Passar", "JLPT N3 • Fios que conduzem o tempo."],
+      ["k_済", "済", "sai", ["su", "sai", "sei"], "Concluir / Finanças", "JLPT N3 • Atravessar o rio."],
+      ["k_守", "守", "shu", ["mamo", "mori", "shu", "su"], "Proteger / Defender", "JLPT N3 • Mão/lei sob um teto."],
+      ["k_決", "決", "ketsu", ["ki", "ketsu"], "Decidir / Resolver", "JLPT N3 • Fluxo de água que rompe."],
+      ["k_定", "定", "tei", ["sada", "tei", "jou"], "Fixar / Determinar", "JLPT N3 • Ordem sob o teto."],
+      ["k_実", "実", "jitsu", ["mi", "mino", "jitsu"], "Realidade / Fruto", "JLPT N3 • Plenitude em casa."],
+      ["k_現", "現", "gen", ["arawa", "gen"], "Presente / Aparecer", "JLPT N3 • Joia que se revela à vista."],
+      ["k_調", "調", "chou", ["shira", "totono", "chou"], "Investigar / Tom", "JLPT N3 • Palavras (言) completas (周)."],
+      ["k_화", "和", "wa", ["yawa", "nago", "wa", "o"], "Harmonia / Paz / Japão", "JLPT N3 • Cereal (禾) na boca (口)."],
+      ["k_平", "平", "hei", ["tai", "hira", "hei", "byou"], "Plano / Paz / Igual", "JLPT N3 • Balança equilibrada."],
+      ["k_成", "成", "sei", ["na", "sei", "jou"], "Tornar-se / Alcançar", "JLPT N3 • Realizar com firmeza."],
+      ["k_果", "果", "ka", ["ha", "ka"], "Fruto / Resultado", "JLPT N3 • Fruto no topo da árvore (木)."],
+      ["k_感", "感", "kan", ["kan"], "Sentimento / Emoção", "JLPT N3 • Aquilo que toca o coração (心)."],
+      ["k_情", "情", "jou", ["nasa", "jou", "sei"], "Emoção / Compaixão", "JLPT N3 • Coração (忄) puro (青)."],
+      ["k_想", "想", "sou", ["omo", "sou", "so"], "Conceito / Imaginar", "JLPT N3 • Observar (相) com o coração (心)."],
+      ["k_必", "必", "hitsu", ["kanara", "hitsu"], "Certamente / Necessário", "JLPT N3 • Coração atravessado por firmeza."],
+      ["k_要", "要", "you", ["i", "you"], "Necessitar / Essencial", "JLPT N3 • Ponto central."],
+      ["k_増", "増", "zou", ["ma", "fu", "zou"], "Aumentar / Multiplicar", "JLPT N3 • Acumular camadas de terra."],
+      ["k_減", "減", "gen", ["he", "gen"], "Diminuir / Reduzir", "JLPT N3 • Nível de água baixando."],
+      ["k_続", "続", "zoku", ["tsuzu", "zoku"], "Continuar / Prosseguir", "JLPT N3 • Fio contínuo."],
+      ["k_変", "変", "hen", ["ka", "hen"], "Mudar / Estranho", "JLPT N3 • Transformação em movimento."],
+      ["k_信", "信", "shin", ["shin"], "Acreditar / Confiança", "JLPT N3 • Pessoa (亻) e sua palavra (言)."],
+      ["k_連", "連", "ren", ["tsura", "tsu", "ren"], "Conectar / Levar consigo", "JLPT N3 • Veículos em fila na estrada."]
     ]
   },
-  "lvl4": {
-    name: "Nível 4: Verbos & Escola JLPT N5 (10 Kanjis)",
+  "n2": {
+    name: "JLPT N2 — Avançado (~380 Kanjis técnicos e jornais)",
     items: [
-      ["k_31", "本", "hon", ["hon", "moto"], "Livro / Origem", "Uma árvore (木) com a raiz marcada na base."],
-      ["k_32", "学", "mana", ["mana", "gaku"], "Estudar / Ciência", "Uma criança (子) sob o teto de uma escola."],
-      ["k_33", "生", "i", ["i", "nama", "sei", "shou"], "Vida / Nascer", "Uma planta brotando da terra fértil."],
-      ["k_34", "先", "saki", ["saki", "sen"], "Antes / Futuro / Guia", "Uma pessoa caminhando à frente das outras."],
-      ["k_35", "行", "i", ["i", "yu", "kou", "gyou"], "Ir / Andar", "Um cruzamento de ruas movimentado."],
-      ["k_36", "来", "ku", ["ku", "ki", "rai"], "Vir / Próximo", "Trigo crescendo que traz a colheita que vem."],
-      ["k_37", "食", "ta", ["ta", "shoku"], "Comer / Comida", "Algo bom sob um teto (restaurante/casa)."],
-      ["k_38", "飲", "no", ["no", "in"], "Beber", "Relacionado a comida/boca aberta engolindo líquido."],
-      ["k_39", "見", "mi", ["mi", "ken"], "Ver / Olhar", "Um olho (目) sobre duas pernas caminhando."],
-      ["k_40", "聞", "ki", ["ki", "bun", "mon"], "Ouvir / Perguntar", "Uma orelha (耳) atenta atrás de um portão (門)."]
+      ["k_圧", "圧", "atsu", ["atsu", "o"], "Pressão / Comprimir", "JLPT N2 • Terra sob força de penhasco."],
+      ["k_電", "電", "den", ["den"], "Eletricidade", "JLPT N2 • Chuva/nuvem (雨) com raio."],
+      ["k_流", "流", "ryuu", ["naga", "ryuu", "ru"], "Corrente / Fluxo", "JLPT N2 • Fluido em movimento."],
+      ["k_制", "制", "sei", ["sei"], "Controle / Sistema", "JLPT N2 • Aparar e regular."],
+      ["k_御", "御", "gyo", ["on", "o", "gyo", "go"], "Controlar / Honorífico", "JLPT N2 • Comandar (ex: 制御 Seigyo = Controle)."],
+      ["k_構", "構", "kou", ["kama", "kou"], "Estrutura / Construir", "JLPT N2 • Madeira entrelaçada."],
+      ["k_造", "造", "zou", ["tsuku", "zou"], "Fabricar / Construir", "JLPT N2 • Produzir e avançar."],
+      ["k_設", "設", "setsu", ["mou", "setsu"], "Estabelecer / Projetar", "JLPT N2 • Planejar com palavras e ferramenta."],
+      ["k_備", "備", "bi", ["sona", "bi"], "Equipar / Preparar", "JLPT N2 • Deixar pronto para uso."],
+      ["k_測", "測", "soku", ["haka", "soku"], "Medir / Mensurar", "JLPT N2 • Medir profundidade da água."],
+      ["k_量", "量", "ryou", ["haka", "ryou"], "Quantidade / Medida", "JLPT N2 • Peso e grandeza."],
+      ["k_効", "効", "kou", ["ki", "kou"], "Eficácia / Efeito", "JLPT N2 • Cruzar forças (力)."],
+      ["k_率", "率", "ritsu", ["hiki", "ritsu", "sotsu"], "Taxa / Rendimento", "JLPT N2 • Proporção ou eficiência (効率)."],
+      ["k_蓄", "蓄", "chiku", ["takuwa", "chiku"], "Armazenar / Acumular", "JLPT N2 • Guardar energia/recursos."],
+      ["k_乾", "乾", "kan", ["kawa", "kan"], "Seco / Secar", "JLPT N2 • Vapor subindo ao sol."],
+      ["k_燥", "燥", "sou", ["hasha", "sou"], "Ressecar / Árido", "JLPT N2 • Fogo (火) secando madeira."],
+      ["k_複", "複", "fuku", ["fuku"], "Múltiplo / Complexo", "JLPT N2 • Camadas dobradas."],
+      ["k_雑", "雑", "zatsu", ["zatsu", "zou"], "Diversos / Complexo", "JLPT N2 • Mistura variada."],
+      ["k_較", "較", "kaku", ["kura", "kaku", "kou"], "Comparar", "JLPT N2 • Alinhar carruagens."],
+      ["k_حص", "検査", "ken", ["ken"], "Inspeção / Exame", "JLPT N2 • Verificar minuciosamente."]
+    ]
+  },
+  "n1": {
+    name: "JLPT N1 — Fluência Total (Até os +2.136 Jōyō Kanjis)",
+    items: [
+      ["k_憲", "憲", "ken", ["ken"], "Constituição / Lei Suprema", "JLPT N1 • Lei que rege a mente e o Estado."],
+      ["k_覇", "覇", "ha", ["ha", "hata"], "Hegemonia / Supremacia", "JLPT N1 • Domínio absoluto."],
+      ["k_顕", "顕", "ken", ["aki", "arawa", "ken"], "Manifesto / Evidente", "JLPT N1 • Fios visíveis à luz do sol."],
+      ["k_微", "微", "bi", ["kasu", "bi"], "Minúsculo / Micro / Sutil", "JLPT N1 • Cálculo diferencial (微分)."],
+      ["k_積", "積", "seki", ["tsu", "seki"], "Acumular / Produto / Integral", "JLPT N1 • Cálculo integral (積分)."],
+      ["k_磁", "磁", "ji", ["ji"], "Magnetismo / Ímã", "JLPT N1 • Pedra (石) magnética (磁気)."],
+      ["k_誘", "誘", "yuu", ["saso", "yuu"], "Induzir / Convidar", "JLPT N1 • Indução eletromagnética (誘導)."],
+      ["k_導", "導", "dou", ["michibi", "dou"], "Conduzir / Guiar", "JLPT N1 • Semicondutor (半導体)."],
+      ["k_絶縁", "絶", "zetsu", ["ta", "zetsu"], "Isolar / Cortar", "JLPT N1 • Isolamento (絶縁)."],
+      ["k_縁", "縁", "en", ["fuchi", "yukari", "en"], "Vínculo / Borda", "JLPT N1 • Fio que contorna."],
+      ["k_振", "振", "shin", ["fu", "shin"], "Oscilar / Vibrar", "JLPT N1 • Oscilação/Frequência (振動)."],
+      ["k_幅", "幅", "fuku", ["haba", "fuku"], "Largura / Amplitude", "JLPT N1 • Amplitude de onda (振幅)."],
+      ["k_周", "周", "shuu", ["mawa", "shuu"], "Perímetro / Ciclo", "JLPT N1 • Frequência (周波数)."],
+      ["k_波", "波", "ha", ["nami", "ha"], "Onda", "JLPT N1 • Forma de onda (波形)."],
+      ["k_整", "整", "sei", ["totono", "sei"], "Ajustar / Retificar", "JLPT N1 • Retificador (整流器)."],
+      ["k_変", "変換", "kan", ["ka", "kan"], "Converter / Trocar", "JLPT N1 • Conversor (変換器)."],
+      ["k_御", "制御", "gyo", ["gyo", "go"], "Domínio / Regulação", "JLPT N1 • Engenharia de controle."],
+      ["k_冗", "冗", "jou", ["jou"], "Redundância / Supérfluo", "JLPT N1 • Redundância de sistema (冗長性)."],
+      ["k_瞬", "瞬", "shun", ["matata", "shun"], "Instante / Transitório", "JLPT N1 • Valor instantâneo (瞬時値)."],
+      ["k_穏", "穏", "on", ["oda", "on"], "Calmo / Estável", "JLPT N1 • Estado estacionário/calmo."]
     ]
   }
 };
-
 // 3. PARES CONFUSOS & DICAS AUTOMÁTICAS DE MELHORIA
 const CONFUSING_HINTS = {
   // Hiragana
@@ -208,64 +316,208 @@ const NihongoData = {
   /**
    * Retorna a fila de símbolos de alfabeto conforme os filtros marcados pelo usuário
    */
-  getAlphabetPool(options = { hiragana: true, katakana: false, kanji: false, includeDakuten: false, includeYoon: false, kanjiLevels: ["lvl1"] }) {
+  /**
+   * Retorna a fila de símbolos de alfabeto conforme os filtros marcados pelo usuário
+   * (Agora inclui o mapeamento cruzado hiraganaPair / katakanaPair)
+   */fullKanjiLoaded: false,
+
+  /**
+   * Baixa assincronamente o dicionário completo com +2.136 Jōyō Kanjis (N5 a N1)
+   * e faz cache no navegador para não pesar no repositório do GitHub!
+   */
+  async loadFullJLPTKanji() {
+    if (this.fullKanjiLoaded) return true;
+
+    // 1. Tenta ler do cache local primeiro
+    const cached = localStorage.getItem("nd_joyo_kanji_cache_v1");
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        this.mergeExternalKanji(parsed);
+        this.fullKanjiLoaded = true;
+        return true;
+      } catch (e) {
+        console.warn("Cache de Kanji inválido, baixando novamente...");
+      }
+    }
+
+    // 2. Baixa base pública compacta com os +2.100 Kanjis do JLPT (N5 a N1)
+    try {
+      const res = await fetch("https://raw.githubusercontent.com/davidluzgouveia/kanji-data/master/kanji-jouyou.json");
+      if (!res.ok) throw new Error("Falha ao buscar pacote Jōyō Kanji");
+      const rawJson = await res.json();
+
+      // Compacta apenas o essencial: [char, jlpt_new, wk_readings, meanings]
+      const compactByLevel = { n5: [], n4: [], n3: [], n2: [], n1: [] };
+
+      Object.entries(rawJson).forEach(([char, info]) => {
+        const lvlNum = info.jlpt_new || 1; // Kanjis Jōyō avançados sem nível caem no N1
+        const lvlKey = `n${lvlNum}`;
+        if (!compactByLevel[lvlKey]) return;
+
+        // Extrai leituras em Romaji ou converte do Kana se necessário
+        const readingsOn = (info.readings_on || []).map(k => this.kanaToRomaji(k));
+        const readingsKun = (info.readings_kun || []).map(k => this.kanaToRomaji(k.replace(/[.-]/g, "")));
+        const allRomaji = [...new Set([...readingsOn, ...readingsKun])].filter(Boolean);
+
+        const primaryRomaji = allRomaji[0] || "kanji";
+        const meaning = (info.meanings && info.meanings[0]) ? info.meanings[0] : "Ideograma Jōyō";
+
+        compactByLevel[lvlKey].push([
+          `k_${char}`,
+          char,
+          primaryRomaji,
+          allRomaji.length > 0 ? allRomaji.slice(0, 5) : [primaryRomaji],
+          meaning,
+          `JLPT N${lvlNum} (${info.strokes || "?"} traços) • Leituras: ${allRomaji.slice(0, 4).join(", ")}`
+        ]);
+      });
+
+      this.mergeExternalKanji(compactByLevel);
+      try {
+        localStorage.setItem("nd_joyo_kanji_cache_v1", JSON.stringify(compactByLevel));
+      } catch (storageErr) {
+        // Se o localStorage estiver cheio, mantém em RAM normalmente
+      }
+      this.fullKanjiLoaded = true;
+      return true;
+    } catch (err) {
+      console.warn("Usando pacote local de Kanjis N5-N1:", err);
+      return false;
+    }
+  },
+
+  mergeExternalKanji(compactByLevel) {
+    ["n5", "n4", "n3", "n2", "n1"].forEach(lvlKey => {
+      if (compactByLevel[lvlKey] && compactByLevel[lvlKey].length > 0) {
+        const existingIds = new Set(RAW_KANJI_LEVELS[lvlKey].items.map(x => x[1]));
+        compactByLevel[lvlKey].forEach(item => {
+          if (!existingIds.has(item[1])) {
+            RAW_KANJI_LEVELS[lvlKey].items.push(item);
+          }
+        });
+      }
+    });
+  },
+
+  /**
+   * Conversor leve de Hiragana/Katakana para Romaji (para processar leituras Kun/On dos 2.136 Kanjis)
+   */
+  kanaToRomaji(kanaStr) {
+    if (!kanaStr) return "";
+    if (!this._kanaMap) {
+      this._kanaMap = {};
+      [...RAW_KANA_YOON, ...RAW_KANA_DAKUTEN, ...RAW_KANA_GOJUON].forEach(([rom, hira, kata]) => {
+        this._kanaMap[hira] = rom;
+        this._kanaMap[kata] = rom;
+      });
+    }
+    let out = "";
+    let i = 0;
+    while (i < kanaStr.length) {
+      const two = kanaStr.slice(i, i + 2);
+      if (this._kanaMap[two]) {
+        out += this._kanaMap[two];
+        i += 2;
+        continue;
+      }
+      const one = kanaStr[i];
+      if (one === "っ" || one === "ッ") {
+        const nextOne = kanaStr[i + 1];
+        const nextRom = this._kanaMap[nextOne] || "";
+        if (nextRom) out += nextRom[0];
+        i += 1;
+        continue;
+      }
+      if (one === "ー" && out.length > 0) {
+        out += out[out.length - 1];
+        i += 1;
+        continue;
+      }
+      out += this._kanaMap[one] || "";
+      i += 1;
+    }
+    return out;
+  },
+
+  /**
+   * Retorna a fila de símbolos de alfabeto conforme os filtros marcados pelo usuário
+   * Suporta fatiamento por lote (kanjiBatch) para não sobrecarregar nos +2.000 Kanjis!
+   */
+  getAlphabetPool(options = { hiragana: true, katakana: false, kanji: false, includeDakuten: false, includeYoon: false, kanjiLevels: ["n5"], kanjiBatch: "all" }) {
     const pool = [];
     let rawKana = [...RAW_KANA_GOJUON];
     if (options.includeDakuten) rawKana = rawKana.concat(RAW_KANA_DAKUTEN);
     if (options.includeYoon) rawKana = rawKana.concat(RAW_KANA_YOON);
 
     if (options.hiragana) {
-      rawKana.forEach(([romaji, hira, _, alts]) => {
+      rawKana.forEach(([romaji, hira, kata, alts]) => {
         const id = `h_${romaji}`;
         pool.push({
           id,
           symbol: hira,
+          hiraganaPair: hira,
+          katakanaPair: kata,
           romaji,
           acceptedRomaji: [romaji, ...alts],
           type: "hiragana",
           meaning: null,
-          hint: CONFUSING_HINTS[id] || `Hiragana para a sílaba "${romaji.toUpperCase()}".`
+          hint: CONFUSING_HINTS[id] || `Hiragana para "${romaji.toUpperCase()}" (Katakana equivalente: ${kata}).`
         });
       });
     }
 
     if (options.katakana) {
-      rawKana.forEach(([romaji, _, kata, alts]) => {
+      rawKana.forEach(([romaji, hira, kata, alts]) => {
         const id = `k_${romaji}`;
         pool.push({
           id,
           symbol: kata,
+          hiraganaPair: hira,
+          katakanaPair: kata,
           romaji,
           acceptedRomaji: [romaji, ...alts],
           type: "katakana",
           meaning: null,
-          hint: CONFUSING_HINTS[id] || `Katakana para a sílaba "${romaji.toUpperCase()}".`
+          hint: CONFUSING_HINTS[id] || `Katakana "${kata}" corresponde ao Hiragana "${hira}" (${romaji.toUpperCase()}).`
         });
       });
     }
 
     if (options.kanji && options.kanjiLevels && options.kanjiLevels.length > 0) {
+      let combinedKanji = [];
       options.kanjiLevels.forEach(lvlKey => {
         const lvl = RAW_KANJI_LEVELS[lvlKey];
         if (lvl) {
-          lvl.items.forEach(([id, char, romaji, alts, meaning, hint]) => {
-            pool.push({
-              id,
-              symbol: char,
-              romaji,
-              acceptedRomaji: alts,
-              type: "kanji",
-              meaning,
-              hint: `${meaning} (${alts.join(" / ")}) — ${hint}`
-            });
-          });
+          combinedKanji = combinedKanji.concat(lvl.items);
         }
+      });
+
+      // Aplica delimitação por lote (ex: "0-25", "25-50", etc.) para evitar sobrecarga
+      if (options.kanjiBatch && options.kanjiBatch !== "all") {
+        const [start, end] = options.kanjiBatch.split("-").map(Number);
+        if (!isNaN(start) && !isNaN(end)) {
+          combinedKanji = combinedKanji.slice(start, end);
+        }
+      }
+
+      combinedKanji.forEach(([id, char, romaji, alts, meaning, hint]) => {
+        pool.push({
+          id,
+          symbol: char,
+          hiraganaPair: null,
+          katakanaPair: null,
+          romaji,
+          acceptedRomaji: alts,
+          type: "kanji",
+          meaning,
+          hint: `${meaning} (${alts.join(" / ")}) — ${hint}`
+        });
       });
     }
 
     return pool;
   },
-
   /**
    * Retorna a lista de vocabulários para o sistema de escrita escolhido
    */
