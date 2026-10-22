@@ -333,30 +333,69 @@
         </div>
 
         <!-- Delimitação de Níveis de Kanji (Exibido quando Kanji está marcado) -->
-        <div id="kanji-levels-box" class="hidden bg-amber-500/5 border border-amber-500/30 rounded-2xl p-4 space-y-3">
-          <div class="flex items-center justify-between">
+        <!-- Delimitação de Níveis JLPT (N5 a N1) + Fatiamento de Lotes -->
+        <div id="kanji-levels-box" class="hidden bg-amber-500/5 border border-amber-500/30 rounded-2xl p-4 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <label class="text-xs font-bold uppercase tracking-wider text-amber-400">
-              3. Delimitação de Níveis de Kanji (Evita sobrecarga)
+              3. Proficiência JLPT (N5 ao N1 — Mais de 2.100 Jōyō Kanjis)
             </label>
-            <span class="text-[11px] text-amber-300/80">Escolha 1 ou mais pacotes</span>
+            <span id="kanji-db-status" class="text-[11px] bg-amber-500/10 text-amber-300 px-2.5 py-0.5 rounded-full font-semibold">
+              📦 Carregando base Jōyō completa...
+            </span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
-              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl1" checked />
-              <span><strong>Nível 1:</strong> Números & Quantidades (一, 二, 三... 十)</span>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 has-[:checked]:border-emerald-500 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-emerald-500" value="n5" checked onchange="App.updateKanjiBatchOptions()" />
+              <div>
+                <strong class="text-emerald-400">JLPT N5 (Iniciante)</strong>
+                <span id="count-kanji-n5" class="block text-[11px] text-slate-400">~100 Kanjis básicos</span>
+              </div>
             </label>
-            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
-              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl2" />
-              <span><strong>Nível 2:</strong> Natureza & Elementos (日, 月, 火, 水, 木...)</span>
+
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 has-[:checked]:border-sky-500 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-sky-500" value="n4" onchange="App.updateKanjiBatchOptions()" />
+              <div>
+                <strong class="text-sky-400">JLPT N4 (Básico)</strong>
+                <span id="count-kanji-n4" class="block text-[11px] text-slate-400">~180 Kanjis cotidianos</span>
+              </div>
             </label>
-            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
-              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl3" />
-              <span><strong>Nível 3:</strong> Pessoas & Posições (人, 口, 大, 小, 上, 下...)</span>
+
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 has-[:checked]:border-amber-500 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="n3" onchange="App.updateKanjiBatchOptions()" />
+              <div>
+                <strong class="text-amber-400">JLPT N3 (Intermediário)</strong>
+                <span id="count-kanji-n3" class="block text-[11px] text-slate-400">~370 Kanjis intermediários</span>
+              </div>
             </label>
-            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
-              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-amber-500" value="lvl4" />
-              <span><strong>Nível 4:</strong> Escola & Verbos JLPT N5 (本, 学, 生, 食, 見...)</span>
+
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 has-[:checked]:border-purple-500 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-purple-500" value="n2" onchange="App.updateKanjiBatchOptions()" />
+              <div>
+                <strong class="text-purple-400">JLPT N2 (Avançado)</strong>
+                <span id="count-kanji-n2" class="block text-[11px] text-slate-400">~380 Kanjis técnicos/jornais</span>
+              </div>
             </label>
+
+            <label class="cursor-pointer bg-slate-900/90 border border-slate-800 has-[:checked]:border-rose-500 rounded-xl p-3 flex items-center gap-2.5 text-xs sm:text-sm sm:col-span-2 lg:col-span-2">
+              <input type="checkbox" class="chk-kanji-lvl w-4 h-4 accent-rose-500" value="n1" onchange="App.updateKanjiBatchOptions()" />
+              <div>
+                <strong class="text-rose-400">JLPT N1 (Fluência Completa — +1.100 Kanjis N1 / Total +2.136 Jōyō)</strong>
+                <span id="count-kanji-n1" class="block text-[11px] text-slate-400">Domínio universitário, engenharia e literatura</span>
+              </div>
+            </label>
+          </div>
+
+          <!-- Delimitador de Sub-lote para evitar sobrecarga nos níveis grandes -->
+          <div class="pt-2 border-t border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <label class="text-xs font-bold text-amber-200">
+              🎯 Delimitar Lote de Estudo (Para não sobrecarregar):
+            </label>
+            <select id="sel-kanji-batch" class="bg-slate-900 border border-amber-500/40 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white focus:outline-none">
+              <option value="all">Sortear de todo o nível selecionado (Via Smart Queue IA)</option>
+              <option value="0-25">Lote 1 (Kanjis 1 a 25)</option>
+              <option value="25-50">Lote 2 (Kanjis 26 a 50)</option>
+            </select>
           </div>
         </div>
 
@@ -370,12 +409,13 @@
               <option value="all" selected>Alfabeto Completo Selecionado (Todos os símbolos)</option>
             </select>
           </div>
-          <div>
+         <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Formato das Questões</label>
-            <select id="sel-alpha-mode" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-500">
+            <select id="sel-alpha-mode" onchange="App.onAlphaModeChange()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-500">
               <option value="mixed" selected>Misto: Digitar Romaji + Múltipla Escolha (ex: "Ki" → き)</option>
               <option value="input">Apenas Digitação em Romaji</option>
               <option value="choice">Apenas Múltipla Escolha de Partículas/Símbolos</option>
+              <option value="kata_to_hira">Katakana ➔ Escrever em Hiragana (ア → あ)</option>
             </select>
           </div>
         </div>
@@ -423,17 +463,30 @@
         </div>
 
         <!-- MODO A: Input Direto em Romaji -->
+        <!-- MODO A / KATA->HIRA: Input Direto (Romaji ou Caractere Hiragana) -->
         <div id="alpha-input-container" class="space-y-3">
           <div class="flex gap-2">
             <input type="text" id="alpha-romaji-input" autocomplete="off" autocapitalize="off" spellcheck="false"
               placeholder="Ex: ka, shi, tsu..."
-              class="flex-1 bg-slate-900 border-2 border-slate-700 focus:border-rose-500 rounded-xl px-4 py-3 text-center text-lg font-bold text-white focus:outline-none" />
+              class="jp-font flex-1 bg-slate-900 border-2 border-slate-700 focus:border-rose-500 rounded-xl px-4 py-3 text-center text-xl font-bold text-white focus:outline-none" />
             <button id="alpha-submit-btn" onclick="App.submitAlphabetInput()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl transition">
               Confirmar
             </button>
           </div>
-        </div>
 
+          <!-- Grade Auxiliar de Hiragana (Aparece apenas no modo Katakana -> Hiragana) -->
+          <div id="alpha-hira-picker-box" class="hidden bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-2">
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>⌨️ Digite com seu teclado japonês (IME) ou clique no Hiragana abaixo:</span>
+              <button type="button" onclick="document.getElementById('alpha-romaji-input').value=''; document.getElementById('alpha-romaji-input').focus();" class="text-rose-400 hover:underline">
+                Limpar ⌫
+              </button>
+            </div>
+            <div id="alpha-hira-tiles" class="flex flex-wrap gap-2 justify-center pt-1">
+              <!-- Gerado via JS -->
+            </div>
+          </div>
+        </div>
         <!-- MODO B: Múltipla Escolha (Mostrar "Ki" e escolher o símbolo certo) -->
         <div id="alpha-choice-container" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3">
           <!-- Botões gerados via JS -->
