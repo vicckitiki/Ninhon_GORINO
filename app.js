@@ -653,18 +653,18 @@ const App = {
     if (s.currentQuestionType === "kata_to_hira") {
       if (isCorrect) {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
-        title.innerHTML = `✅ Correto! Katakana <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> ➔ Hiragana <span class="jp-font font-black text-lg mx-1 text-white">${item.hiraganaPair}</span>`;
+        title.innerHTML = `✅ Mandou bem! Katakana <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> = Hiragana <span class="jp-font font-black text-lg mx-1 text-white">${item.hiraganaPair}</span>`;
       } else {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
-        title.innerHTML = `❌ O Hiragana de <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> é <span class="jp-font font-black text-xl mx-1 text-white">${item.hiraganaPair}</span> (Você colocou: <span class="jp-font">${userAnswer}</span>)`;
+        title.innerHTML = `❌ Você errou! Digitou <span class="jp-font font-bold underline">${userAnswer}</span>, mas o Hiragana correto para <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> é <span class="jp-font font-black text-xl mx-1 text-emerald-400">${item.hiraganaPair}</span>`;
       }
     } else {
       if (isCorrect) {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
-        title.innerHTML = `✅ Correto! <span class="jp-font font-black text-lg ml-1">${item.symbol}</span> = <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
+        title.innerHTML = `✅ Você acertou! <span class="jp-font font-black text-lg ml-1">${item.symbol}</span> se lê <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
       } else {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
-        title.innerHTML = `❌ Resposta certa: <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> = <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong> (Você respondeu: <em>${userAnswer}</em>)`;
+        title.innerHTML = `❌ Você errou! Digitou <strong>"${userAnswer}"</strong>, mas o correto para <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> é <strong class="text-emerald-400">${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
       }
     }
 
