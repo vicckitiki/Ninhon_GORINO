@@ -464,12 +464,13 @@
 
         <!-- MODO A: Input Direto em Romaji -->
         <!-- MODO A / KATA->HIRA: Input Direto (Romaji ou Caractere Hiragana) -->
-        <div id="alpha-input-container" class="space-y-3">
-          <div class="flex gap-2">
+       <!-- MODO A / KATA->HIRA: Input Direto (Romaji ou Caractere Hiragana) -->
+        <div id="alpha-input-container" class="space-y-3 w-full">
+          <div class="flex flex-col sm:flex-row gap-2.5 w-full">
             <input type="text" id="alpha-romaji-input" autocomplete="off" autocapitalize="off" spellcheck="false"
               placeholder="Ex: ka, shi, tsu..."
-              class="jp-font flex-1 bg-slate-900 border-2 border-slate-700 focus:border-rose-500 rounded-xl px-4 py-3 text-center text-xl font-bold text-white focus:outline-none" />
-            <button id="alpha-submit-btn" onclick="App.submitAlphabetInput()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl transition">
+              class="jp-font w-full min-w-0 sm:flex-1 bg-slate-900 border-2 border-slate-700 focus:border-rose-500 rounded-xl px-4 py-3 text-center text-lg sm:text-xl font-bold text-white focus:outline-none" />
+            <button id="alpha-submit-btn" onclick="App.submitAlphabetInput()" class="w-full sm:w-auto bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl transition shrink-0">
               Confirmar
             </button>
           </div>
