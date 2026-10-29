@@ -1,10 +1,5 @@
 /**
- * NIHONGO DUO - app.js (Versão Completa Unificada)
- * Inclui:
- * - Dashboard Comparativo (Você vs Amigo) + Radar SRS
- * - Modo Katakana -> Escrever em Hiragana (caractere japonês direto + teclado de blocos)
- * - Suporte a Kanjis JLPT N5 a N1 (+2.136 Jōyō Kanjis) com fatiamento em Lotes de 25
- * - Treino de Vocabulário Duplo (JP->PT e PT->JP com construtor de blocos)
+ * NIHONGO DUO - app.js (Versão Completa com Suporte à Trilha Genki I)
  */
 
 const App = {
@@ -17,9 +12,9 @@ const App = {
     index: 0,
     hits: 0,
     misses: 0,
-    mistakes: [], // [{ item, userAnswer }]
+    mistakes: [],
     startTime: 0,
-    mode: "mixed", // "mixed" | "input" | "choice" | "kata_to_hira"
+    mode: "mixed",
     currentQuestionType: "input",
     awaitingNext: false
   },
@@ -27,7 +22,7 @@ const App = {
   // Estado da Sessão de Vocabulário
   vocabSession: {
     scriptType: "hiragana",
-    mode: "jp_to_pt", // "jp_to_pt" | "pt_to_jp"
+    mode: "jp_to_pt",
     pool: [],
     queue: [],
     index: 0,
@@ -36,9 +31,17 @@ const App = {
     awaitingNext: false
   },
 
-  /**
-   * Inicialização geral do aplicativo
-   */
+  // Estado da Sessão de Genki (Gramática e Partículas)
+  genkiSession: {
+    currentLessonId: "L1",
+    queue: [],
+    index: 0,
+    hits: 0,
+    misses: 0,
+    isAllLessons: false,
+    awaitingNext: false
+  },
+
   async init() {
     window.NihongoDB.subscribe((data, activeUser, syncStatus) => {
       this.renderHeader(data, activeUser, syncStatus);
@@ -51,7 +54,9 @@ const App = {
     await window.NihongoDB.init();
     this.renderDashboard();
 
-    // Carrega os +2.136 Jōyō Kanjis (N5 a N1) em segundo plano se a função existir no data.js
+    // Renderiza a visão inicial da Trilha Genki (Lição 1)
+    this.renderGenkiLessonView();
+
     if (typeof window.NihongoData.loadFullJLPTKanji === "function") {
       window.NihongoData.loadFullJLPTKanji().then((loaded) => {
         this.updateKanjiCountsUI(loaded);
@@ -63,16 +68,12 @@ const App = {
     }
   },
 
-  /**
-   * Atalhos globais de teclado (Enter confirma e avança para a próxima questão)
-   */
   bindKeyboardShortcuts() {
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Enter") return;
 
       const alphaQuizPanel = document.getElementById("alpha-quiz-panel");
-      const alphaQuizVisible = alphaQuizPanel && !alphaQuizPanel.classList.contains("hidden");
-      if (this.currentTab === "alphabet" && alphaQuizVisible) {
+      if (this.currentTab === "alphabet" && alphaQuizPanel && !alphaQuizPanel.classList.contains("hidden")) {
         e.preventDefault();
         if (this.alphaSession.awaitingNext) {
           this.nextAlphabetQuestion();
@@ -86,21 +87,26 @@ const App = {
       }
 
       const vocabQuizPanel = document.getElementById("vocab-quiz-panel");
-      const vocabQuizVisible = vocabQuizPanel && !vocabQuizPanel.classList.contains("hidden");
-      if (this.currentTab === "vocab" && vocabQuizVisible) {
+      if (this.currentTab === "vocab" && vocabQuizPanel && !vocabQuizPanel.classList.contains("hidden")) {
         e.preventDefault();
         if (this.vocabSession.awaitingNext) {
           this.nextVocabQuestion();
         } else {
           this.submitVocabAnswer();
         }
+        return;
+      }
+
+      const genkiQuizPanel = document.getElementById("genki-quiz-panel");
+      if (this.currentTab === "genki" && genkiQuizPanel && !genkiQuizPanel.classList.contains("hidden")) {
+        e.preventDefault();
+        if (this.genkiSession.awaitingNext) {
+          this.nextGenkiQuestion();
+        }
       }
     });
   },
 
-  /**
-   * Atualiza cabeçalho (Jogador ativo, Streak e Status Firebase)
-   */
   renderHeader(data, activeUser, syncStatus) {
     const u1Name = data.u1?.n || "Jogador 1";
     const u2Name = data.u2?.n || "Jogador 2";
@@ -155,9 +161,10 @@ const App = {
 
   switchTab(tabName) {
     this.currentTab = tabName;
-    ["dashboard", "alphabet", "vocab"].forEach(t => {
+    ["dashboard", "alphabet", "vocab", "genki"].forEach(t => {
       const view = document.getElementById(`view-${t}`);
       const btn = document.getElementById(`tab-btn-${t}`);
+      if (!view || !btn) return;
       if (t === tabName) {
         view.classList.remove("hidden");
         btn.className = "tab-active py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2";
@@ -169,11 +176,13 @@ const App = {
 
     if (tabName === "dashboard") {
       this.renderDashboard();
+    } else if (tabName === "genki") {
+      this.renderGenkiLessonView();
     }
   },
 
   /* ==========================================================================
-   * ABA 1: DASHBOARD COMPARATIVO (VOCÊ VS AMIGO) & RECOMENDAÇÕES SRS
+   * ABA 1: DASHBOARD COMPARATIVO & RECOMENDAÇÕES SRS
    * ========================================================================== */
   renderDashboard() {
     const metrics = window.NihongoDB.getComparisonMetrics();
@@ -200,7 +209,8 @@ const App = {
       { key: "hiragana", label: "Hiragana (あ)" },
       { key: "katakana", label: "Katakana (ア)" },
       { key: "kanji",    label: "Kanji (漢)" },
-      { key: "vocab",    label: "Vocabulário (語)" }
+      { key: "vocab",    label: "Vocabulário (語)" },
+      { key: "genki",    label: "Gramática Genki (文)" }
     ];
 
     const barsHtml = catDefs.map(cat => {
@@ -233,7 +243,7 @@ const App = {
     if (recs.weakItems.length === 0) {
       weakContainer.innerHTML = `
         <div class="col-span-2 bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-xs text-slate-400 text-center">
-          🎉 Nenhum erro crítico registrado ainda! Faça um treino de Alfabeto ou Vocabulário para calibrar seu radar.
+          🎉 Nenhum erro crítico registrado ainda! Faça um treino na Trilha Genki ou Alfabeto para calibrar seu radar.
         </div>
       `;
     } else {
@@ -295,7 +305,7 @@ const App = {
   },
 
   /* ==========================================================================
-   * ABA 2: MOTOR DE TREINO DE ALFABETO (KANA, KATA->HIRA E KANJI JLPT N5-N1)
+   * ABA 2: MOTOR DE TREINO DE ALFABETO (KANA, KATA->HIRA E KANJI N5-N1)
    * ========================================================================== */
   toggleKanjiLevelsVisibility() {
     const isKanjiChecked = document.getElementById("chk-alpha-kanji").checked;
@@ -309,9 +319,6 @@ const App = {
     }
   },
 
-  /**
-   * Atualiza os contadores de Kanji de N5 a N1 na interface
-   */
   updateKanjiCountsUI(fullLoaded) {
     const statusEl = document.getElementById("kanji-db-status");
     let totalKanji = 0;
@@ -330,9 +337,6 @@ const App = {
     }
   },
 
-  /**
-   * Gera os Lotes de 25 em 25 Kanjis para não sobrecarregar o estudo nos níveis grandes (N3, N2, N1)
-   */
   updateKanjiBatchOptions() {
     const batchSelect = document.getElementById("sel-kanji-batch");
     if (!batchSelect) return;
@@ -353,9 +357,6 @@ const App = {
     batchSelect.innerHTML = html;
   },
 
-  /**
-   * Ajusta automaticamente os checkboxes quando o usuário escolhe o modo Katakana -> Hiragana
-   */
   onAlphaModeChange() {
     const mode = document.getElementById("sel-alpha-mode").value;
     if (mode === "kata_to_hira") {
@@ -374,7 +375,6 @@ const App = {
     const includeDakuten = document.getElementById("chk-alpha-dakuten").checked;
     const includeYoon = document.getElementById("chk-alpha-yoon").checked;
 
-    // No modo Katakana -> Hiragana, garantimos que o pool carregue Katakana
     if (mode === "kata_to_hira") {
       katakana = true;
       hiragana = false;
@@ -471,7 +471,6 @@ const App = {
     const romajiInput = document.getElementById("alpha-romaji-input");
 
     if (s.currentQuestionType === "kata_to_hira") {
-      // MODO KATAKANA -> HIRAGANA (Escrita em caractere japonês, sem Romaji)
       instruction.innerHTML = "Escreva o caractere <strong class='text-rose-400'>Hiragana</strong> correspondente a este Katakana:";
       mainDisplay.textContent = item.symbol;
       audioBtn.classList.remove("hidden");
@@ -563,9 +562,6 @@ const App = {
     }
   },
 
-  /**
-   * Preenche o campo quando o usuário clica num bloco de Hiragana na tela
-   */
   selectHiraTile(hiraChar) {
     if (this.alphaSession.awaitingNext) return;
     const inputEl = document.getElementById("alpha-romaji-input");
@@ -589,7 +585,6 @@ const App = {
       const rawHira = (inputEl.value || "").trim();
       if (!rawHira) return;
 
-      // Impede que o usuário responda em Romaji neste modo
       if (/[a-zA-Z]/.test(rawHira)) {
         alert("Neste modo você deve escrever o caractere em Hiragana (ex: あ, き, し), e não como é falado em Romaji!");
         inputEl.focus();
@@ -653,7 +648,7 @@ const App = {
     if (s.currentQuestionType === "kata_to_hira") {
       if (isCorrect) {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
-        title.innerHTML = `✅ Mandou bem! Katakana <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> = Hiragana <span class="jp-font font-black text-lg mx-1 text-white">${item.hiraganaPair}</span>`;
+        title.innerHTML = `✅ Correto! Katakana <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> ➔ Hiragana <span class="jp-font font-black text-lg mx-1 text-white">${item.hiraganaPair}</span>`;
       } else {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
         title.innerHTML = `❌ Você errou! Digitou <span class="jp-font font-bold underline">${userAnswer}</span>, mas o Hiragana correto para <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> é <span class="jp-font font-black text-xl mx-1 text-emerald-400">${item.hiraganaPair}</span>`;
@@ -661,7 +656,7 @@ const App = {
     } else {
       if (isCorrect) {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
-        title.innerHTML = `✅ Você acertou! <span class="jp-font font-black text-lg ml-1">${item.symbol}</span> se lê <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
+        title.innerHTML = `✅ Você acertou! <span class="jp-font font-black text-lg ml-1">${item.symbol}</span> = <strong>${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
       } else {
         box.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
         title.innerHTML = `❌ Você errou! Digitou <strong>"${userAnswer}"</strong>, mas o correto para <span class="jp-font font-black text-lg mx-1">${item.symbol}</span> é <strong class="text-emerald-400">${item.acceptedRomaji.join(" / ").toUpperCase()}</strong>`;
@@ -701,7 +696,7 @@ const App = {
       retryBtn.classList.add("hidden");
       tipsList.innerHTML = `
         <div class="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-4 text-sm text-emerald-300 font-medium">
-          🏆 Desempenho impecável! Você não errou nenhum caractere nesta sessão. Experimente ativar <strong>Dakuten</strong>, <strong>Yoon</strong> ou avançar um lote/nível de <strong>Kanji</strong>!
+          🏆 Desempenho impecável! Você não errou nenhum caractere nesta sessão. Experimente avançar um lote de Kanji!
         </div>
       `;
     } else {
@@ -752,13 +747,29 @@ const App = {
   },
 
   /* ==========================================================================
-   * ABA 3: MOTOR DE VOCABULÁRIO (MODO 1: JP->PT e MODO 2: PT->JP COM BLOCOS)
+   * ABA 3: TREINO DE VOCABULÁRIO (INCLUINDO FILTRO GENKI)
    * ========================================================================== */
+  toggleVocabGenkiSelect() {
+    const isGenkiChecked = document.getElementById("radio-vocab-genki").checked;
+    const box = document.getElementById("vocab-genki-lesson-box");
+    if (!box) return;
+    if (isGenkiChecked) {
+      box.classList.remove("hidden");
+    } else {
+      box.classList.add("hidden");
+    }
+  },
+
   startVocabSession() {
     const scriptRadio = document.querySelector('input[name="vocab-script"]:checked');
     const modeRadio = document.querySelector('input[name="vocab-mode"]:checked');
 
-    const scriptType = scriptRadio ? scriptRadio.value : "hiragana";
+    let scriptType = scriptRadio ? scriptRadio.value : "hiragana";
+    if (scriptType === "genki") {
+      const lessonSel = document.getElementById("sel-vocab-genki-lesson");
+      scriptType = lessonSel ? lessonSel.value : "genki_all";
+    }
+
     const mode = modeRadio ? modeRadio.value : "jp_to_pt";
 
     const rawPool = window.NihongoData.getVocabularyPool(scriptType);
@@ -785,7 +796,7 @@ const App = {
     const s = this.vocabSession;
     if (s.index >= s.queue.length) {
       window.NihongoDB.commitSession();
-      alert(`Sessão de Vocabulário concluída!\nAcertos: ${s.hits} | Erros: ${s.misses}\nSeu progresso foi atualizado no ranking!`);
+      alert(`Sessão de Vocabulário concluída!\nAcertos: ${s.hits} | Erros: ${s.misses}\nProgresso salvo!`);
       this.resetVocabView();
       this.switchTab("dashboard");
       return;
@@ -799,8 +810,7 @@ const App = {
     document.getElementById("vocab-progress-text").textContent = `${currentNum} / ${total}`;
     document.getElementById("vocab-progress-bar").style.width = `${Math.round((currentNum / total) * 100)}%`;
 
-    const scriptNames = { hiragana: "Hiragana", katakana: "Katakana", kanji: "Kanji" };
-    document.getElementById("vocab-badge-info").textContent = `${scriptNames[s.scriptType]} • ${s.mode === "jp_to_pt" ? "JP ➔ PT" : "PT ➔ JP"}`;
+    document.getElementById("vocab-badge-info").textContent = `${s.scriptType.toUpperCase()} • ${s.mode === "jp_to_pt" ? "JP ➔ PT" : "PT ➔ JP"}`;
     document.getElementById("vocab-category-tag").textContent = item.category;
 
     const promptDisplay = document.getElementById("vocab-prompt-display");
@@ -943,7 +953,7 @@ const App = {
         : (step2Correct ? "✅ Escrita JP correta" : `❌ Escrita certa: <span class="jp-font font-black text-base">${item.word}</span>`);
       title.innerHTML = `${rStatus} &nbsp;|&nbsp; ${s2Status}`;
     }
-    detail.innerHTML = `💡 Dica de estrutura: ${item.hint}`;
+    detail.innerHTML = `💡 Dica: ${item.hint}`;
 
     document.getElementById("vocab-next-btn").focus();
   },
@@ -957,6 +967,174 @@ const App = {
     window.NihongoDB.commitSession();
     document.getElementById("vocab-quiz-panel").classList.add("hidden");
     document.getElementById("vocab-setup-panel").classList.remove("hidden");
+  },
+
+  /* ==========================================================================
+   * ABA 4: TRILHA GENKI (GRAMÁTICA, RESUMOS E QUIZ DE PARTÍCULAS)
+   * ========================================================================== */
+  renderGenkiLessonView() {
+    const sel = document.getElementById("sel-genki-lesson");
+    const lessonKey = sel ? sel.value : "L1";
+    const lesson = window.NihongoData.getGenkiLesson(lessonKey);
+
+    document.getElementById("genki-lesson-title").textContent = lesson.title;
+    document.getElementById("genki-lesson-subtitle").textContent = lesson.subtitle;
+
+    // Renderiza Cards de Gramática
+    const grammarContainer = document.getElementById("genki-grammar-cards");
+    grammarContainer.innerHTML = lesson.grammar.map(g => `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
+        <h4 class="font-extrabold text-sm sm:text-base text-emerald-400">${g.rule}</h4>
+        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">${g.explanation}</p>
+        <div onclick="NihongoData.speakJapanese('${g.exampleJp}')" class="cursor-pointer bg-slate-950/80 hover:bg-slate-900 border border-emerald-500/20 rounded-xl p-3 flex items-center justify-between gap-3 transition">
+          <div>
+            <div class="jp-font text-base sm:text-lg font-bold text-white">${g.exampleJp}</div>
+            <div class="text-xs text-slate-400 font-medium">${g.exampleRomaji} — <em>${g.examplePt}</em></div>
+          </div>
+          <span class="text-xs text-emerald-400 font-bold shrink-0">🔊 Ouvir</span>
+        </div>
+      </div>
+    `).join("");
+
+    // Renderiza Vocabulário Chave da Lição
+    const vocabContainer = document.getElementById("genki-lesson-vocab-list");
+    vocabContainer.innerHTML = lesson.vocab.map(v => `
+      <div onclick="NihongoData.speakJapanese('${v[1]}')" class="cursor-pointer bg-slate-900/90 hover:bg-slate-800 border border-slate-800 rounded-xl p-3 flex items-center justify-between transition">
+        <div>
+          <div class="jp-font text-base font-bold text-emerald-300">${v[1]} <span class="text-xs text-slate-400 font-normal">(${v[2]})</span></div>
+          <div class="text-xs text-slate-200 font-medium">${v[3][0]}</div>
+        </div>
+        <span class="text-xs text-slate-500">🔊</span>
+      </div>
+    `).join("");
+  },
+
+  startGenkiVocabFromLesson() {
+    const sel = document.getElementById("sel-genki-lesson");
+    const lessonKey = sel ? sel.value : "L1";
+    this.switchTab("vocab");
+    document.getElementById("radio-vocab-genki").checked = true;
+    this.toggleVocabGenkiSelect();
+    const genkiSelect = document.getElementById("sel-vocab-genki-lesson");
+    if (genkiSelect) genkiSelect.value = `genki_${lessonKey}`;
+    this.startVocabSession();
+  },
+
+  startGenkiGrammarQuiz(isAll) {
+    this.genkiSession.isAllLessons = isAll;
+    let questions = [];
+
+    if (isAll) {
+      const allKeys = Object.keys(window.GENKI_LESSONS);
+      questions = window.NihongoData.getAllGenkiQuestions(allKeys);
+    } else {
+      const sel = document.getElementById("sel-genki-lesson");
+      const lessonKey = sel ? sel.value : "L1";
+      this.genkiSession.currentLessonId = lessonKey;
+      questions = window.NihongoData.getAllGenkiQuestions([lessonKey]);
+    }
+
+    questions.sort(() => Math.random() - 0.5);
+
+    this.genkiSession.queue = questions;
+    this.genkiSession.index = 0;
+    this.genkiSession.hits = 0;
+    this.genkiSession.misses = 0;
+    this.genkiSession.awaitingNext = false;
+
+    document.getElementById("genki-study-panel").classList.add("hidden");
+    document.getElementById("genki-quiz-panel").classList.remove("hidden");
+
+    this.renderGenkiQuestion();
+  },
+
+  renderGenkiQuestion() {
+    const s = this.genkiSession;
+    if (s.index >= s.queue.length) {
+      window.NihongoDB.commitSession();
+      alert(`Parabéns! Quiz de Gramática Genki concluído!\nAcertos: ${s.hits} | Erros: ${s.misses}\nSeu ranking foi atualizado!`);
+      this.closeGenkiQuiz();
+      return;
+    }
+
+    s.awaitingNext = false;
+    const q = s.queue[s.index];
+
+    const total = s.queue.length;
+    const currentNum = s.index + 1;
+    document.getElementById("genki-quiz-progress-text").textContent = `${currentNum} / ${total}`;
+    document.getElementById("genki-quiz-progress-bar").style.width = `${Math.round((currentNum / total) * 100)}%`;
+    document.getElementById("genki-quiz-badge").textContent = s.isAllLessons ? q.lessonTitle : `Genki ${q.lessonId}`;
+
+    document.getElementById("genki-quiz-sentence").innerHTML = q.sentence;
+    document.getElementById("genki-quiz-translation").textContent = `"${q.translation}"`;
+
+    document.getElementById("genki-quiz-feedback").classList.add("hidden");
+
+    const optionsContainer = document.getElementById("genki-quiz-options");
+    optionsContainer.innerHTML = q.options.map(opt => `
+      <button onclick="App.submitGenkiAnswer('${opt}')" class="char-tile jp-font text-lg sm:text-xl font-bold bg-slate-900 hover:bg-emerald-600 border-2 border-slate-700 hover:border-emerald-500 rounded-2xl py-4 px-3 text-white transition">
+        ${opt}
+      </button>
+    `).join("");
+  },
+
+  playCurrentGenkiAudio() {
+    const q = this.genkiSession.queue[this.genkiSession.index];
+    if (q && q.audioText) {
+      window.NihongoData.speakJapanese(q.audioText);
+    }
+  },
+
+  submitGenkiAnswer(chosenOpt) {
+    const s = this.genkiSession;
+    if (s.awaitingNext) return;
+
+    const q = s.queue[s.index];
+    const isCorrect = chosenOpt === q.answer;
+    s.awaitingNext = true;
+
+    // Desativa os botões após a escolha
+    const buttons = document.querySelectorAll("#genki-quiz-options button");
+    buttons.forEach(btn => btn.disabled = true);
+
+    if (isCorrect) {
+      s.hits += 1;
+    } else {
+      s.misses += 1;
+    }
+
+    // Registra tentativa no banco (categoria "genki")
+    window.NihongoDB.recordAttempt(q.id, "genki", isCorrect);
+    if (q.audioText) window.NihongoData.speakJapanese(q.audioText);
+
+    const feedbackBox = document.getElementById("genki-quiz-feedback");
+    const title = document.getElementById("genki-quiz-feedback-title");
+    const exp = document.getElementById("genki-quiz-feedback-exp");
+
+    feedbackBox.classList.remove("hidden");
+    if (isCorrect) {
+      feedbackBox.className = "rounded-xl p-4 text-sm space-y-1.5 border bg-emerald-950/40 border-emerald-500/40 text-emerald-200";
+      title.innerHTML = `✅ Correto! A resposta é <strong>${q.answer}</strong>`;
+    } else {
+      feedbackBox.className = "rounded-xl p-4 text-sm space-y-1 border bg-rose-950/40 border-rose-500/40 text-rose-200";
+      title.innerHTML = `❌ Resposta certa: <strong class="text-emerald-400">${q.answer}</strong> (Você escolheu: ${chosenOpt})`;
+    }
+    exp.innerHTML = `💡 <strong>Explicação:</strong> ${q.explanation}`;
+
+    document.getElementById("genki-quiz-next-btn").focus();
+  },
+
+  nextGenkiQuestion() {
+    this.genkiSession.index += 1;
+    this.renderGenkiQuestion();
+  },
+
+  closeGenkiQuiz() {
+    window.NihongoDB.commitSession();
+    document.getElementById("genki-quiz-panel").classList.add("hidden");
+    document.getElementById("genki-study-panel").classList.remove("hidden");
+    this.renderGenkiLessonView();
   },
 
   /* ==========================================================================
