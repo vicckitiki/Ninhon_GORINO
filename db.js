@@ -1,5 +1,5 @@
 /**
- * NIHONGO DUO - PASSO 2: db.js
+ * NIHONGO DUO - db.js (Versão Completa com Suporte à Trilha Genki I)
  * Micro-Schema Ultra-Otimizado (LocalStorage + Firebase Realtime Sync)
  * + Algoritmo de Recomendação Inteligente (Smart Queue SRS)
  */
@@ -8,21 +8,20 @@ const STORAGE_KEY_DB = "nd_compact_db_v1";
 const STORAGE_KEY_FB_URL = "nd_fb_url_v1";
 const STORAGE_KEY_ACTIVE_USER = "nd_active_user_v1";
 
-// Caso queira deixar a URL do seu Firebase fixa no GitHub para seu amigo não precisar colar,
-// basta preencher abaixo (ex: "https://seu-projeto-default-rtdb.firebaseio.com")
+// URL do seu Firebase Realtime Database já configurada:
 const DEFAULT_FIREBASE_URL = "https://ninhou-65d0d-default-rtdb.firebaseio.com";
 
 /**
- * Estrutura vazia ultracompacta de um jogador (~80 bytes)
+ * Estrutura vazia ultracompacta de um jogador (~90 bytes)
  * s: [totalHits, totalMisses, streakDays, lastStudyYYYYMMDD]
- * c: [hiraHit, hiraMiss, kataHit, kataMiss, kanjiHit, kanjiMiss, vocabHit, vocabMiss]
+ * c: [hiraHit, hiraMiss, kataHit, kataMiss, kanjiHit, kanjiMiss, vocabHit, vocabMiss, genkiHit, genkiMiss]
  * w: { "id_item": [hits, misses] }
  */
 function createEmptyUser(name) {
   return {
     n: name,
     s: [0, 0, 0, 0],
-    c: [0, 0, 0, 0, 0, 0, 0, 0],
+    c: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     w: {}
   };
 }
@@ -38,6 +37,9 @@ const NihongoDB = {
   listeners: [],
   pollTimer: null,
 
+  /**
+   * Inicializa o banco local e conecta ao Firebase se configurado
+   */
   async init() {
     this.loadLocal();
     if (this.firebaseUrl) {
@@ -47,6 +49,9 @@ const NihongoDB = {
     this.notify();
   },
 
+  /**
+   * Inscreve callbacks da interface para atualizar a tela automaticamente
+   */
   subscribe(cb) {
     this.listeners.push(cb);
   },
@@ -55,13 +60,37 @@ const NihongoDB = {
     this.listeners.forEach(cb => cb(this.data, this.activeUser, this.syncStatus));
   },
 
+  /**
+   * Garante que o vetor 'c' tenha as 10 posições mesmo vindo de versões anteriores
+   */
+  ensureSchema(userObj) {
+    if (!userObj.s || userObj.s.length < 4) {
+      userObj.s = [
+        userObj.s?.[0] || 0,
+        userObj.s?.[1] || 0,
+        userObj.s?.[2] || 0,
+        userObj.s?.[3] || 0
+      ];
+    }
+    if (!userObj.c) userObj.c = [];
+    while (userObj.c.length < 10) {
+      userObj.c.push(0);
+    }
+    if (!userObj.w) userObj.w = {};
+    return userObj;
+  },
+
+  /**
+   * Carrega cache do navegador
+   */
   loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_DB);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed.u1 && parsed.u2) {
-          this.data = parsed;
+          this.data.u1 = this.ensureSchema(parsed.u1);
+          this.data.u2 = this.ensureSchema(parsed.u2);
         }
       }
     } catch (e) {
@@ -69,6 +98,9 @@ const NihongoDB = {
     }
   },
 
+  /**
+   * Salva no navegador instantaneamente
+   */
   saveLocal() {
     try {
       localStorage.setItem(STORAGE_KEY_DB, JSON.stringify(this.data));
@@ -77,6 +109,9 @@ const NihongoDB = {
     }
   },
 
+  /**
+   * Alterna entre Você (u1) e Seu Amigo (u2)
+   */
   setActiveUser(userKey) {
     if (userKey === "u1" || userKey === "u2") {
       this.activeUser = userKey;
@@ -85,6 +120,9 @@ const NihongoDB = {
     }
   },
 
+  /**
+   * Altera o nome de exibição do jogador atual
+   */
   setUserName(userKey, newName) {
     const clean = (newName || "").trim().slice(0, 18);
     if (!clean) return;
@@ -94,6 +132,9 @@ const NihongoDB = {
     this.notify();
   },
 
+  /**
+   * Configura a URL do Firebase Realtime Database
+   */
   async setFirebaseConfig(url) {
     let cleanUrl = (url || "").trim().replace(/\/+$/, "");
     if (cleanUrl && !cleanUrl.startsWith("https://")) {
@@ -114,6 +155,9 @@ const NihongoDB = {
     }
   },
 
+  /**
+   * Sincronização leve via REST JSON
+   */
   async pullFromFirebase() {
     if (!this.firebaseUrl) return;
     try {
@@ -141,21 +185,27 @@ const NihongoDB = {
     this.notify();
   },
 
+  /**
+   * Faz o merge inteligente mantendo o maior progresso entre nuvem e local
+   */
   mergeUserProfile(uk, remoteUser) {
     const localUser = this.data[uk] || createEmptyUser(uk === "u1" ? "Jogador 1" : "Jogador 2");
     const rTotal = (remoteUser.s?.[0] || 0) + (remoteUser.s?.[1] || 0);
     const lTotal = (localUser.s?.[0] || 0) + (localUser.s?.[1] || 0);
 
     if (rTotal >= lTotal) {
-      this.data[uk] = {
+      this.data[uk] = this.ensureSchema({
         n: remoteUser.n || localUser.n,
         s: remoteUser.s || [0, 0, 0, 0],
-        c: remoteUser.c || [0, 0, 0, 0, 0, 0, 0, 0],
+        c: remoteUser.c || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         w: remoteUser.w || {}
-      };
+      });
     }
   },
 
+  /**
+   * Envia apenas o nó do jogador ativo (Economiza metade da banda!)
+   */
   async pushUserToFirebase(userKey) {
     if (!this.firebaseUrl) return;
     try {
@@ -199,17 +249,26 @@ const NihongoDB = {
     }, 25000);
   },
 
+  /**
+   * Retorna data atual no formato inteiro compacto YYYYMMDD
+   */
   getTodayInt() {
     const d = new Date();
     return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
   },
 
+  /**
+   * Registra um acerto ou erro no perfil ativo e atualiza ofensiva (Streak)
+   * category: "hiragana" | "katakana" | "kanji" | "vocab" | "genki"
+   */
   recordAttempt(itemId, category, isCorrect) {
-    const user = this.data[this.activeUser];
+    const user = this.ensureSchema(this.data[this.activeUser]);
     const hitIdx = isCorrect ? 0 : 1;
 
+    // 1. Atualiza placar geral
     user.s[hitIdx] = (user.s[hitIdx] || 0) + 1;
 
+    // 2. Atualiza Streak de dias seguidos
     const today = this.getTodayInt();
     const lastDay = user.s[3] || 0;
     if (lastDay !== today) {
@@ -225,17 +284,21 @@ const NihongoDB = {
       user.s[3] = today;
     }
 
-    const catMap = { hiragana: 0, katakana: 2, kanji: 4, vocab: 6 };
+    // 3. Atualiza contadores por categoria no vetor 'c'
+    const catMap = { hiragana: 0, katakana: 2, kanji: 4, vocab: 6, genki: 8 };
     const baseIdx = catMap[category] ?? 6;
     user.c[baseIdx + hitIdx] = (user.c[baseIdx + hitIdx] || 0) + 1;
 
-    if (!user.w) user.w = {};
+    // 4. Atualiza histórico específico do item (w[itemId] = [hits, misses])
     if (!user.w[itemId]) user.w[itemId] = [0, 0];
     user.w[itemId][hitIdx] += 1;
 
     this.saveLocal();
   },
 
+  /**
+   * Salva o lote da sessão no Firebase ao finalizar ou pausar um treino
+   */
   async commitSession() {
     this.saveLocal();
     if (this.firebaseUrl) {
@@ -245,6 +308,9 @@ const NihongoDB = {
     }
   },
 
+  /**
+   * ALGORITMO SMART QUEUE (Repetição Espaçada & Priorização de Erros)
+   */
   buildSmartQueue(pool, maxItems = null) {
     const userW = this.data[this.activeUser]?.w || {};
 
@@ -273,6 +339,9 @@ const NihongoDB = {
       .map(x => x.item);
   },
 
+  /**
+   * Gera recomendações personalizadas para o usuário ativo com base nos pontos fracos
+   */
   getRecommendations(userKey = this.activeUser) {
     const user = this.data[userKey];
     const w = user?.w || {};
@@ -280,12 +349,13 @@ const NihongoDB = {
     const allAlpha = window.NihongoData.getAlphabetPool({
       hiragana: true, katakana: true, kanji: true,
       includeDakuten: true, includeYoon: true,
-      kanjiLevels: ["lvl1", "lvl2", "lvl3", "lvl4"]
+      kanjiLevels: ["n5", "n4", "n3", "n2", "n1"]
     });
     const allVocab = [
       ...window.NihongoData.getVocabularyPool("hiragana"),
       ...window.NihongoData.getVocabularyPool("katakana"),
-      ...window.NihongoData.getVocabularyPool("kanji")
+      ...window.NihongoData.getVocabularyPool("kanji"),
+      ...window.NihongoData.getVocabularyPool("genki_all")
     ];
 
     const catalog = {};
@@ -315,9 +385,12 @@ const NihongoDB = {
     };
   },
 
+  /**
+   * Calcula todas as métricas de comparação entre Você (u1) e Seu Amigo (u2)
+   */
   getComparisonMetrics() {
     const calcUserStats = (uk) => {
-      const u = this.data[uk];
+      const u = this.ensureSchema(this.data[uk]);
       const [hits, misses, streak] = u.s;
       const total = hits + misses;
       const acc = total > 0 ? Math.round((hits / total) * 100) : 0;
@@ -346,7 +419,8 @@ const NihongoDB = {
           hiragana: { hits: u.c[0] || 0, misses: u.c[1] || 0, acc: catAcc(0) },
           katakana: { hits: u.c[2] || 0, misses: u.c[3] || 0, acc: catAcc(2) },
           kanji:    { hits: u.c[4] || 0, misses: u.c[5] || 0, acc: catAcc(4) },
-          vocab:    { hits: u.c[6] || 0, misses: u.c[7] || 0, acc: catAcc(6) }
+          vocab:    { hits: u.c[6] || 0, misses: u.c[7] || 0, acc: catAcc(6) },
+          genki:    { hits: u.c[8] || 0, misses: u.c[9] || 0, acc: catAcc(8) }
         }
       };
     };
@@ -364,7 +438,8 @@ const NihongoDB = {
   async importJSON(jsonStr) {
     const parsed = JSON.parse(jsonStr);
     if (!parsed.u1 || !parsed.u2) throw new Error("Formato de backup inválido.");
-    this.data = parsed;
+    this.data.u1 = this.ensureSchema(parsed.u1);
+    this.data.u2 = this.ensureSchema(parsed.u2);
     this.saveLocal();
     if (this.firebaseUrl) await this.pushAllToFirebase();
     this.notify();
