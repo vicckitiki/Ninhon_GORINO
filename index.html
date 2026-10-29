@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nihongo Duo — Estudo Competitivo de Japonês</title>
+  <title>Nihongo Duo — Estudo Competitivo de Japonês & Trilha Genki</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts: Inter + Noto Sans JP -->
@@ -75,7 +75,7 @@
           <h1 class="font-extrabold text-lg tracking-tight leading-none flex items-center gap-2">
             Nihongo <span class="text-rose-500">Duo</span>
           </h1>
-          <p class="text-xs text-slate-400">Kana, Kanji & Vocabulário Competitivo</p>
+          <p class="text-xs text-slate-400">Kana, Kanji, Vocabulário & Genki I</p>
         </div>
       </div>
 
@@ -112,20 +112,24 @@
     </div>
   </header>
 
-  <!-- NAVEGAÇÃO PRINCIPAL POR ABAS -->
+  <!-- NAVEGAÇÃO PRINCIPAL POR 4 ABAS -->
   <nav class="max-w-6xl mx-auto w-full px-4 pt-5">
-    <div class="grid grid-cols-3 gap-2 sm:gap-3 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-900/90 p-1.5 rounded-2xl border border-slate-800">
       <button id="tab-btn-dashboard" onclick="App.switchTab('dashboard')" class="tab-active py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
         <span>🏆</span>
-        <span>Duelo & Desempenho</span>
+        <span>Duelo & Radar</span>
       </button>
       <button id="tab-btn-alphabet" onclick="App.switchTab('alphabet')" class="text-slate-300 hover:text-white py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
         <span class="jp-font font-bold">あ</span>
-        <span>Treinar Alfabeto</span>
+        <span>Alfabeto & Kanji</span>
       </button>
       <button id="tab-btn-vocab" onclick="App.switchTab('vocab')" class="text-slate-300 hover:text-white py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
         <span class="jp-font font-bold">語</span>
-        <span>Treinar Vocabulário</span>
+        <span>Vocabulário</span>
+      </button>
+      <button id="tab-btn-genki" onclick="App.switchTab('genki')" class="text-slate-300 hover:text-white py-2.5 px-3 rounded-xl font-bold text-xs sm:text-sm transition flex items-center justify-center gap-2">
+        <span>📖</span>
+        <span>Trilha Genki</span>
       </button>
     </div>
   </nav>
@@ -146,7 +150,7 @@
             Jogando como: <span id="dash-active-name" class="text-rose-500">Jogador 1</span>
           </h2>
           <p class="text-xs sm:text-sm text-slate-400 mt-1">
-            O algoritmo rastreia seus erros e prioriza automaticamente os símbolos e vocabulários mais difíceis.
+            O algoritmo rastreia seus erros e prioriza automaticamente os símbolos, vocabulários e gramáticas mais difíceis.
           </p>
         </div>
         <div class="flex flex-wrap gap-2.5 w-full md:w-auto">
@@ -154,8 +158,8 @@
             <span>⚡</span>
             <span>Revisar Meus Erros</span>
           </button>
-          <button onclick="App.switchTab('alphabet')" class="flex-1 md:flex-initial bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition border border-slate-700">
-            Novo Treino
+          <button onclick="App.switchTab('genki')" class="flex-1 md:flex-initial bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-4 py-2.5 rounded-xl text-xs sm:text-sm transition border border-slate-700">
+            📖 Estudar Genki
           </button>
         </div>
       </div>
@@ -213,7 +217,7 @@
 
           <!-- Barras Comparativas por Categoria -->
           <div class="space-y-3 pt-2" id="comparison-bars-container">
-            <!-- Preenchido via JS (Hiragana, Katakana, Kanji, Vocabulário) -->
+            <!-- Preenchido via JS (Hiragana, Katakana, Kanji, Vocabulário, Gramática Genki) -->
           </div>
         </div>
 
@@ -259,7 +263,7 @@
     </section>
 
     <!-- ==========================================
-         ABA 2: TREINO DE ALFABETO (KANA & KANJI)
+         ABA 2: TREINO DE ALFABETO (KANA & KANJI N5-N1)
          ========================================== -->
     <section id="view-alphabet" class="hidden space-y-6">
 
@@ -267,9 +271,9 @@
       <div id="alpha-setup-panel" class="glass-card rounded-2xl p-5 sm:p-7 space-y-6">
         <div class="border-b border-slate-800 pb-4">
           <span class="text-xs font-bold uppercase tracking-wider text-rose-400">Módulo 1</span>
-          <h2 class="text-xl sm:text-2xl font-extrabold mt-0.5">Configurar Sessão de Alfabeto</h2>
+          <h2 class="text-xl sm:text-2xl font-extrabold mt-0.5">Configurar Sessão de Alfabeto & Kanji</h2>
           <p class="text-xs sm:text-sm text-slate-400 mt-1">
-            Escolha 1, 2 ou os 3 alfabetos. O treino mistura escrita de Romaji e questões de múltipla escolha!
+            Escolha 1, 2 ou os 3 alfabetos. Inclui modo Katakana ➔ Hiragana e todos os níveis do JLPT (N5 ao N1)!
           </p>
         </div>
 
@@ -302,9 +306,9 @@
               <input type="checkbox" id="chk-alpha-kanji" onchange="App.toggleKanjiLevelsVisibility()" class="w-5 h-5 accent-amber-500 rounded" />
               <div>
                 <div class="font-bold text-sm sm:text-base flex items-center gap-2">
-                  <span class="jp-font text-lg text-amber-400">漢</span> Kanji (Por Nível)
+                  <span class="jp-font text-lg text-amber-400">漢</span> Kanji (JLPT N5 a N1)
                 </div>
-                <div class="text-xs text-slate-400">Ideogramas delimitados</div>
+                <div class="text-xs text-slate-400">Ideogramas por proficiência</div>
               </div>
             </label>
 
@@ -332,7 +336,6 @@
           </div>
         </div>
 
-        <!-- Delimitação de Níveis de Kanji (Exibido quando Kanji está marcado) -->
         <!-- Delimitação de Níveis JLPT (N5 a N1) + Fatiamento de Lotes -->
         <div id="kanji-levels-box" class="hidden bg-amber-500/5 border border-amber-500/30 rounded-2xl p-4 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
@@ -406,10 +409,10 @@
             <select id="sel-alpha-limit" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-500">
               <option value="15">Rápido (15 símbolos priorizados por IA)</option>
               <option value="30">Médio (30 símbolos priorizados por IA)</option>
-              <option value="all" selected>Alfabeto Completo Selecionado (Todos os símbolos)</option>
+              <option value="all" selected>Alfabeto/Lote Completo Selecionado</option>
             </select>
           </div>
-         <div>
+          <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Formato das Questões</label>
             <select id="sel-alpha-mode" onchange="App.onAlphaModeChange()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-medium focus:outline-none focus:border-rose-500">
               <option value="mixed" selected>Misto: Digitar Romaji + Múltipla Escolha (ex: "Ki" → き)</option>
@@ -427,10 +430,9 @@
         </div>
       </div>
 
-      <!-- TELA 2B: ARENA DE TREINO DE ALFABETO -->
+      <!-- TELA 2B: ARENA DE TREINO DE ALFABETO (Responsiva p/ Mobile) -->
       <div id="alpha-quiz-panel" class="hidden glass-card rounded-2xl p-5 sm:p-8 max-w-2xl mx-auto space-y-6">
         
-        <!-- Topo do Quiz: Progresso e Botão Sair -->
         <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-2">
             <span id="alpha-badge-type" class="text-xs font-bold uppercase px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-300">Hiragana</span>
@@ -441,7 +443,6 @@
           </button>
         </div>
 
-        <!-- Barra de Progresso -->
         <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
           <div id="alpha-progress-bar" class="h-full bg-rose-500 transition-all duration-300" style="width: 5%"></div>
         </div>
@@ -462,9 +463,7 @@
           <p id="alpha-kanji-meaning" class="text-sm font-semibold text-amber-400 hidden"></p>
         </div>
 
-        <!-- MODO A: Input Direto em Romaji -->
-        <!-- MODO A / KATA->HIRA: Input Direto (Romaji ou Caractere Hiragana) -->
-       <!-- MODO A / KATA->HIRA: Input Direto (Romaji ou Caractere Hiragana) -->
+        <!-- MODO A / KATA->HIRA: Input Direto (Com correção de largura para Mobile!) -->
         <div id="alpha-input-container" class="space-y-3 w-full">
           <div class="flex flex-col sm:flex-row gap-2.5 w-full">
             <input type="text" id="alpha-romaji-input" autocomplete="off" autocapitalize="off" spellcheck="false"
@@ -475,10 +474,10 @@
             </button>
           </div>
 
-          <!-- Grade Auxiliar de Hiragana (Aparece apenas no modo Katakana -> Hiragana) -->
+          <!-- Grade Auxiliar de Hiragana (Aparece no modo Katakana -> Hiragana) -->
           <div id="alpha-hira-picker-box" class="hidden bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-2">
             <div class="flex items-center justify-between text-[11px] text-slate-400">
-              <span>⌨️ Digite com seu teclado japonês (IME) ou clique no Hiragana abaixo:</span>
+              <span>⌨️ Digite em japonês ou toque no Hiragana correspondente:</span>
               <button type="button" onclick="document.getElementById('alpha-romaji-input').value=''; document.getElementById('alpha-romaji-input').focus();" class="text-rose-400 hover:underline">
                 Limpar ⌫
               </button>
@@ -488,7 +487,8 @@
             </div>
           </div>
         </div>
-        <!-- MODO B: Múltipla Escolha (Mostrar "Ki" e escolher o símbolo certo) -->
+
+        <!-- MODO B: Múltipla Escolha -->
         <div id="alpha-choice-container" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-3">
           <!-- Botões gerados via JS -->
         </div>
@@ -523,7 +523,6 @@
           </div>
         </div>
 
-        <!-- Cards de Resumo da Sessão -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
           <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-center">
             <div class="text-2xl sm:text-3xl font-black text-emerald-400" id="rep-alpha-acc">0%</div>
@@ -543,7 +542,6 @@
           </div>
         </div>
 
-        <!-- Diagnóstico e Dicas de Melhoria -->
         <div class="space-y-3">
           <h3 class="font-bold text-base flex items-center gap-2">
             <span>💡</span> Dicas de Melhoria & Análise de Erros da Sessão
@@ -557,7 +555,7 @@
     </section>
 
     <!-- ==========================================
-         ABA 3: TREINO DE VOCABULÁRIO (MODOS 1 E 2)
+         ABA 3: TREINO DE VOCABULÁRIO (MODOS 1 E 2 + FILTRO GENKI)
          ========================================== -->
     <section id="view-vocab" class="hidden space-y-6">
 
@@ -567,39 +565,67 @@
           <span class="text-xs font-bold uppercase tracking-wider text-sky-400">Módulo 2</span>
           <h2 class="text-xl sm:text-2xl font-extrabold mt-0.5">Treino de Vocabulário Duplo</h2>
           <p class="text-xs sm:text-sm text-slate-400 mt-1">
-            Escolha primeiro o alfabeto das palavras e depois o sentido da tradução/escrita.
+            Escolha a fonte das palavras (Hiragana, Katakana, Kanji ou Lições do Genki I) e o sentido da tradução.
           </p>
         </div>
 
-        <!-- Passo 1: Escolha entre os 3 Alfabetos antes de entregar as palavras -->
+        <!-- Passo 1: Escolha entre os 3 Alfabetos ou Lições do Genki -->
         <div class="space-y-3">
           <label class="text-xs font-bold uppercase tracking-wider text-slate-300">
-            1. Escolha o Sistema de Escrita das Palavras
+            1. Escolha o Sistema de Escrita ou Pacote do Genki
           </label>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-rose-500 has-[:checked]:bg-rose-950/20 rounded-xl p-4 flex items-center gap-3">
-              <input type="radio" name="vocab-script" value="hiragana" checked class="w-4 h-4 accent-rose-600" />
+              <input type="radio" name="vocab-script" value="hiragana" checked onchange="App.toggleVocabGenkiSelect()" class="w-4 h-4 accent-rose-600" />
               <div>
-                <div class="font-bold text-sm sm:text-base"><span class="jp-font text-rose-400">みず</span> — Hiragana</div>
+                <div class="font-bold text-sm"><span class="jp-font text-rose-400">みず</span> — Hiragana</div>
                 <div class="text-xs text-slate-400">20 palavras essenciais</div>
               </div>
             </label>
 
             <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-950/20 rounded-xl p-4 flex items-center gap-3">
-              <input type="radio" name="vocab-script" value="katakana" class="w-4 h-4 accent-sky-500" />
+              <input type="radio" name="vocab-script" value="katakana" onchange="App.toggleVocabGenkiSelect()" class="w-4 h-4 accent-sky-500" />
               <div>
-                <div class="font-bold text-sm sm:text-base"><span class="jp-font text-sky-400">コーヒー</span> — Katakana</div>
-                <div class="text-xs text-slate-400">20 palavras do cotidiano</div>
+                <div class="font-bold text-sm"><span class="jp-font text-sky-400">コーヒー</span> — Katakana</div>
+                <div class="text-xs text-slate-400">20 palavras estrangeiras</div>
               </div>
             </label>
 
             <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-amber-500 has-[:checked]:bg-amber-950/20 rounded-xl p-4 flex items-center gap-3">
-              <input type="radio" name="vocab-script" value="kanji" class="w-4 h-4 accent-amber-500" />
+              <input type="radio" name="vocab-script" value="kanji" onchange="App.toggleVocabGenkiSelect()" class="w-4 h-4 accent-amber-500" />
               <div>
-                <div class="font-bold text-sm sm:text-base"><span class="jp-font text-amber-400">先生</span> — Kanji</div>
+                <div class="font-bold text-sm"><span class="jp-font text-amber-400">先生</span> — Kanji</div>
                 <div class="text-xs text-slate-400">20 compostos JLPT N5</div>
               </div>
             </label>
+
+            <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-950/20 rounded-xl p-4 flex items-center gap-3">
+              <input type="radio" name="vocab-script" id="radio-vocab-genki" value="genki" onchange="App.toggleVocabGenkiSelect()" class="w-4 h-4 accent-emerald-500" />
+              <div>
+                <div class="font-bold text-sm">📖 Lições Genki I</div>
+                <div class="text-xs text-slate-400">Por capítulo (L1 a L12)</div>
+              </div>
+            </label>
+          </div>
+
+          <!-- Seletor de Capítulo do Genki (Aparece quando "Lições Genki I" está marcado) -->
+          <div id="vocab-genki-lesson-box" class="hidden bg-emerald-500/5 border border-emerald-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span class="text-xs font-bold text-emerald-300">📖 Selecione o Capítulo do Genki I para treinar o vocabulário:</span>
+            <select id="sel-vocab-genki-lesson" class="bg-slate-900 border border-emerald-500/40 rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-white focus:outline-none">
+              <option value="genki_all">Todas as Lições (L1 a L12 misturadas)</option>
+              <option value="genki_L1" selected>Lição 1: Novos Amigos</option>
+              <option value="genki_L2">Lição 2: Compras</option>
+              <option value="genki_L3">Lição 3: Marcando um Encontro</option>
+              <option value="genki_L4">Lição 4: O Primeiro Encontro</option>
+              <option value="genki_L5">Lição 5: Viagem a Okinawa</option>
+              <option value="genki_L6">Lição 6: Um Dia na Vida de Robert</option>
+              <option value="genki_L7">Lição 7: Foto de Família</option>
+              <option value="genki_L8">Lição 8: Churrasco</option>
+              <option value="genki_L9">Lição 9: Kabuki</option>
+              <option value="genki_L10">Lição 10: Férias de Inverno</option>
+              <option value="genki_L11">Lição 11: Depois das Férias</option>
+              <option value="genki_L12">Lição 12: Sentindo-se Doente</option>
+            </select>
           </div>
         </div>
 
@@ -610,7 +636,6 @@
           </label>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            <!-- Opção 1: Japonês -> Romaji + Português -->
             <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-950/20 rounded-xl p-4 flex items-start gap-3.5">
               <input type="radio" name="vocab-mode" value="jp_to_pt" checked class="w-5 h-5 mt-1 accent-emerald-500" />
               <div class="space-y-1">
@@ -623,15 +648,14 @@
               </div>
             </label>
 
-            <!-- Opção 2: Português -> Romaji + Alfabeto Escolhido -->
             <label class="cursor-pointer bg-slate-900/90 border-2 border-slate-800 has-[:checked]:border-purple-500 has-[:checked]:bg-purple-950/20 rounded-xl p-4 flex items-start gap-3.5">
               <input type="radio" name="vocab-mode" value="pt_to_jp" class="w-5 h-5 mt-1 accent-purple-500" />
               <div class="space-y-1">
                 <div class="font-bold text-sm sm:text-base text-white">
-                  Modo 2: Português ➔ Romaji + Alfabeto Japonês
+                  Modo 2: Português ➔ Romaji + Escrita Japonesa
                 </div>
                 <p class="text-xs text-slate-400">
-                  Apresenta a palavra em Português (ex: <strong>"Água"</strong>). Você escreve em Romaji (<code class="text-purple-400">mizu</code>) e monta a palavra no alfabeto escolhido (<span class="jp-font text-slate-200">みず</span>) usando o teclado ou os blocos na tela!
+                  Apresenta a palavra em Português (ex: <strong>"Água"</strong>). Você escreve em Romaji (<code class="text-purple-400">mizu</code>) e monta a palavra no alfabeto (<span class="jp-font text-slate-200">みず</span>) usando o teclado ou os blocos!
                 </p>
               </div>
             </label>
@@ -663,7 +687,6 @@
           <div id="vocab-progress-bar" class="h-full bg-sky-500 transition-all duration-300" style="width: 8%"></div>
         </div>
 
-        <!-- Palavra-Alvo Exibida -->
         <div class="text-center py-3 space-y-2">
           <span id="vocab-category-tag" class="text-[11px] uppercase tracking-wider font-bold text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-full">Categoria</span>
           <div class="flex items-center justify-center gap-3">
@@ -676,33 +699,29 @@
           </div>
         </div>
 
-        <!-- Campos Duplos de Resposta -->
         <div class="space-y-4">
-          <!-- Passo 1 (Comum aos 2 modos): Escrever em Romaji -->
           <div>
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
               Passo 1: Escreva em Romaji (Alfabeto Romano)
             </label>
             <input type="text" id="vocab-input-romaji" autocomplete="off" autocapitalize="off" spellcheck="false"
               placeholder="Ex: mizu, neko, sensei..."
-              class="w-full bg-slate-900 border-2 border-slate-700 focus:border-sky-500 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none" />
+              class="w-full min-w-0 bg-slate-900 border-2 border-slate-700 focus:border-sky-500 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none" />
           </div>
 
-          <!-- Passo 2 (Modo 1): Significado em Português -->
           <div id="vocab-step2-pt-box">
             <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
               Passo 2: Significado em Português
             </label>
             <input type="text" id="vocab-input-pt" autocomplete="off" spellcheck="false"
               placeholder="Ex: água, gato, professor..."
-              class="w-full bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none" />
+              class="w-full min-w-0 bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-xl px-4 py-2.5 text-base font-bold text-white focus:outline-none" />
           </div>
 
-          <!-- Passo 2 (Modo 2): Escrever no Alfabeto Japonês Escolhido + Construtor de Blocos -->
           <div id="vocab-step2-jp-box" class="hidden space-y-3">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold uppercase tracking-wider text-purple-300">
-                Passo 2: Escreva no Alfabeto Japonês Escolhido
+                Passo 2: Escreva no Alfabeto Japonês
               </label>
               <button type="button" onclick="App.clearVocabJpInput()" class="text-xs text-slate-400 hover:text-rose-400">
                 Limpar ⌫
@@ -710,9 +729,8 @@
             </div>
             <input type="text" id="vocab-input-jp" autocomplete="off" spellcheck="false"
               placeholder="Clique nos blocos abaixo ou digite em japonês..."
-              class="jp-font w-full bg-slate-900 border-2 border-purple-500/50 focus:border-purple-400 rounded-xl px-4 py-2.5 text-xl font-bold text-white text-center focus:outline-none" />
+              class="jp-font w-full min-w-0 bg-slate-900 border-2 border-purple-500/50 focus:border-purple-400 rounded-xl px-4 py-2.5 text-xl font-bold text-white text-center focus:outline-none" />
             
-            <!-- Teclado Assistido de Blocos (Para quem não tem IME Japonês instalado) -->
             <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 space-y-2">
               <div class="text-[11px] text-slate-400 flex justify-between">
                 <span>🧩 Construtor de Caracteres (Clique nas sílabas na ordem certa):</span>
@@ -728,13 +746,147 @@
           </button>
         </div>
 
-        <!-- Feedback da Questão de Vocabulário -->
         <div id="vocab-feedback-box" class="hidden rounded-xl p-4 text-sm space-y-1.5 border">
           <div id="vocab-feedback-title" class="font-bold"></div>
           <div id="vocab-feedback-detail" class="text-xs text-slate-200"></div>
           <div class="pt-2 flex justify-end">
             <button id="vocab-next-btn" onclick="App.nextVocabQuestion()" class="bg-slate-100 hover:bg-white text-slate-900 font-bold px-4 py-1.5 rounded-lg text-xs">
               Próxima Palavra (Enter) ➔
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ==========================================
+         ABA 4: TRILHA GENKI I (GRAMÁTICA, PARTÍCULAS & LIÇÕES 1 A 12)
+         ========================================== -->
+    <section id="view-genki" class="hidden space-y-6">
+
+      <!-- TELA 4A: GUIA DE ESTUDO GENKI + SELETOR DE LIÇÕES -->
+      <div id="genki-study-panel" class="space-y-6">
+        
+        <!-- Topo: Seletor de Capítulo e Botões de Prática -->
+        <div class="glass-card rounded-2xl p-5 sm:p-7 space-y-5">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Módulo 3 • Baseado no livro Genki I (3ª Edição)</span>
+              <h2 id="genki-lesson-title" class="text-xl sm:text-2xl font-extrabold mt-0.5">Lição 1: Novos Amigos</h2>
+              <p id="genki-lesson-subtitle" class="text-xs sm:text-sm text-slate-400 mt-1">
+                Apresentações, X は Y です, Perguntas com か e Partícula の
+              </p>
+            </div>
+
+            <!-- Seletor Rápido de Capítulo -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <select id="sel-genki-lesson" onchange="App.renderGenkiLessonView()" class="bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm font-bold text-white focus:outline-none focus:border-emerald-500">
+                <option value="L1">Lição 1: Novos Amigos (X は Y です / の)</option>
+                <option value="L2">Lição 2: Compras (これ / この / も)</option>
+                <option value="L3">Lição 3: Encontro (Verbos ~ます / を, で, に)</option>
+                <option value="L4">Lição 4: Primeiro Encontro (あります / います)</option>
+                <option value="L5">Lição 5: Viagem a Okinawa (Adjetivos い e な)</option>
+                <option value="L6">Lição 6: Dia de Robert (Forma ~て / Pedidos)</option>
+                <option value="L7">Lição 7: Foto de Família (~ています / Descrição)</option>
+                <option value="L8">Lição 8: Churrasco (Forma Curta / ~ないで)</option>
+                <option value="L9">Lição 9: Kabuki (Passado ~た / Cores)</option>
+                <option value="L10">Lição 10: Férias de Inverno (Comparação / ~つもり)</option>
+                <option value="L11">Lição 11: Depois das Férias (~たい / ~たことがある)</option>
+                <option value="L12">Lição 12: Sentindo-se Doente (~んです / ~ほうがいい)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Botões de Ação da Lição -->
+          <div class="flex flex-wrap gap-3">
+            <button onclick="App.startGenkiGrammarQuiz(false)" class="flex-1 sm:flex-initial bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold px-5 py-3 rounded-xl text-xs sm:text-sm shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2">
+              <span>✍️</span>
+              <span>Praticar Gramática & Partículas desta Lição</span>
+            </button>
+            <button onclick="App.startGenkiVocabFromLesson()" class="flex-1 sm:flex-initial bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold px-5 py-3 rounded-xl text-xs sm:text-sm border border-slate-700 transition flex items-center justify-center gap-2">
+              <span>📚</span>
+              <span>Treinar Vocabulário desta Lição</span>
+            </button>
+            <button onclick="App.startGenkiGrammarQuiz(true)" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-amber-400 font-bold px-4 py-3 rounded-xl text-xs sm:text-sm border border-amber-500/30 transition flex items-center justify-center gap-2">
+              <span>🔥</span>
+              <span>Desafio Geral (Todas as 12 Lições)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid: Resumo Gramatical + Vocabulário da Lição -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Coluna Maior (2/3): Pontos Gramaticais Explicados -->
+          <div class="lg:col-span-2 space-y-4">
+            <h3 class="font-bold text-base sm:text-lg flex items-center gap-2 px-1">
+              <span>📐</span> Regras Gramaticais & Estruturas da Lição
+            </h3>
+            <div id="genki-grammar-cards" class="space-y-4">
+              <!-- Preenchido via JS -->
+            </div>
+          </div>
+
+          <!-- Coluna Lateral (1/3): Vocabulário Chave da Lição -->
+          <div class="space-y-4">
+            <h3 class="font-bold text-base sm:text-lg flex items-center gap-2 px-1">
+              <span>🗣️</span> Vocabulário-Chave (Toque p/ ouvir)
+            </h3>
+            <div id="genki-lesson-vocab-list" class="space-y-2.5">
+              <!-- Preenchido via JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TELA 4B: ARENA DE QUIZ DE GRAMÁTICA & PARTÍCULAS DO GENKI -->
+      <div id="genki-quiz-panel" class="hidden glass-card rounded-2xl p-5 sm:p-8 max-w-2xl mx-auto space-y-6">
+        
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-2">
+            <span id="genki-quiz-badge" class="text-xs font-bold uppercase px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300">Genki L1</span>
+            <span id="genki-quiz-progress-text" class="text-xs font-bold text-slate-400">1 / 4</span>
+          </div>
+          <button onclick="App.closeGenkiQuiz()" class="text-xs text-slate-400 hover:text-white bg-slate-800 px-3 py-1.5 rounded-lg">
+            Voltar à Lição ✕
+          </button>
+        </div>
+
+        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div id="genki-quiz-progress-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 25%"></div>
+        </div>
+
+        <!-- Frase com Lacuna + Tradução -->
+        <div class="text-center py-4 space-y-3">
+          <p class="text-xs text-slate-400 uppercase tracking-wider font-bold">Complete a lacuna com a partícula ou forma correta:</p>
+          <div class="flex items-center justify-center gap-3">
+            <div id="genki-quiz-sentence" class="jp-font text-2xl sm:text-3xl font-black text-white leading-relaxed">
+              わたし [ ___ ] がくせいです。
+            </div>
+            <button onclick="App.playCurrentGenkiAudio()" title="Ouvir frase completa" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-lg transition shrink-0">
+              🔊
+            </button>
+          </div>
+          <p id="genki-quiz-translation" class="text-sm sm:text-base font-medium text-amber-300">
+            "Eu sou estudante."
+          </p>
+        </div>
+
+        <!-- Opções de Múltipla Escolha -->
+        <div id="genki-quiz-options" class="grid grid-cols-2 gap-3">
+          <!-- Gerado via JS -->
+        </div>
+
+        <!-- Feedback Explicativo -->
+        <div id="genki-quiz-feedback" class="hidden rounded-xl p-4 text-sm space-y-1.5 border">
+          <div id="genki-quiz-feedback-title" class="font-bold"></div>
+          <div id="genki-quiz-feedback-exp" class="text-xs text-slate-200 leading-relaxed"></div>
+          <div class="pt-2 flex justify-end">
+            <button id="genki-quiz-next-btn" onclick="App.nextGenkiQuestion()" class="bg-slate-100 hover:bg-white text-slate-900 font-bold px-4 py-1.5 rounded-lg text-xs">
+              Próxima Questão (Enter) ➔
             </button>
           </div>
         </div>
@@ -757,17 +909,12 @@
 
       <div class="space-y-3 text-xs sm:text-sm text-slate-300">
         <p>
-          Para sincronizar seu placar e o do seu amigo em tempo real com <strong>consumo mínimo (~1 KB)</strong>, cole abaixo a URL do seu <strong>Firebase Realtime Database</strong>:
+          Para sincronizar seu placar e o do seu amigo em tempo real com <strong>consumo mínimo (~1 KB)</strong>, confira abaixo a URL do seu <strong>Firebase Realtime Database</strong>:
         </p>
         <div>
           <label class="block text-xs font-bold uppercase text-slate-400 mb-1">URL do Realtime Database</label>
           <input type="url" id="input-firebase-url" placeholder="https://seu-projeto-default-rtdb.firebaseio.com"
             class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-rose-500" />
-        </div>
-        <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 text-[11px] text-slate-400 space-y-1">
-          <div class="font-bold text-slate-300">Como criar em 1 minuto (Grátis):</div>
-          <p>1. Acesse <em>console.firebase.google.com</em> ➔ Crie um projeto ➔ <strong>Realtime Database</strong>.</p>
-          <p>2. Inicie no <strong>Modo de Teste</strong> (regras <code class="text-emerald-400">.read: true, .write: true</code>) e copie o link HTTPS gerado.</p>
         </div>
         <button onclick="App.saveFirebaseUrl()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs sm:text-sm transition">
           Salvar e Sincronizar Nuvem
@@ -788,7 +935,7 @@
     </div>
   </div>
 
-  <!-- SCRIPTS DO PROJETO (Passos 1, 2 e 4) -->
+  <!-- SCRIPTS DO PROJETO -->
   <script src="data.js"></script>
   <script src="db.js"></script>
   <script src="app.js"></script>
