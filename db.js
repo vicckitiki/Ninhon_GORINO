@@ -1,22 +1,18 @@
 /**
- * NIHONGO DUO - db.js (Versão Completa com Suporte à Trilha Genki I)
- * Micro-Schema Ultra-Otimizado (LocalStorage + Firebase Realtime Sync)
- * + Algoritmo de Recomendação Inteligente (Smart Queue SRS)
+ * NIHONGO DUO - db.js (Com Acesso Privado por Domínio + Firebase Anonymous Auth REST)
  */
 
 const STORAGE_KEY_DB = "nd_compact_db_v1";
 const STORAGE_KEY_FB_URL = "nd_fb_url_v1";
+const STORAGE_KEY_FB_KEY = "nd_fb_key_v1";
 const STORAGE_KEY_ACTIVE_USER = "nd_active_user_v1";
 
-// URL do seu Firebase Realtime Database já configurada:
+// 1. URL do seu Realtime Database:
 const DEFAULT_FIREBASE_URL = "https://ninhou-65d0d-default-rtdb.firebaseio.com";
 
-/**
- * Estrutura vazia ultracompacta de um jogador (~90 bytes)
- * s: [totalHits, totalMisses, streakDays, lastStudyYYYYMMDD]
- * c: [hiraHit, hiraMiss, kataHit, kataMiss, kanjiHit, kanjiMiss, vocabHit, vocabMiss, genkiHit, genkiMiss]
- * w: { "id_item": [hits, misses] }
- */
+// 2. COLE AQUI A SUA apiKey DO FIREBASE (Restrita ao domínio vicckitiki.github.io):
+const DEFAULT_FIREBASE_API_KEY = "AIzaSyBoRJHLdVc-fC33JrMoC_eBIyBTf0jGYvI";
+
 function createEmptyUser(name) {
   return {
     n: name,
@@ -33,13 +29,14 @@ const NihongoDB = {
   },
   activeUser: localStorage.getItem(STORAGE_KEY_ACTIVE_USER) || "u1",
   firebaseUrl: localStorage.getItem(STORAGE_KEY_FB_URL) || DEFAULT_FIREBASE_URL,
-  syncStatus: "local", // "local" | "syncing" | "online" | "error"
+  firebaseApiKey: localStorage.getItem(STORAGE_KEY_FB_KEY) || DEFAULT_FIREBASE_API_KEY,
+  idToken: null,
+  refreshToken: null,
+  tokenExpiry: 0,
+  syncStatus: "local",
   listeners: [],
   pollTimer: null,
 
-  /**
-   * Inicializa o banco local e conecta ao Firebase se configurado
-   */
   async init() {
     this.loadLocal();
     if (this.firebaseUrl) {
@@ -49,9 +46,6 @@ const NihongoDB = {
     this.notify();
   },
 
-  /**
-   * Inscreve callbacks da interface para atualizar a tela automaticamente
-   */
   subscribe(cb) {
     this.listeners.push(cb);
   },
@@ -60,9 +54,6 @@ const NihongoDB = {
     this.listeners.forEach(cb => cb(this.data, this.activeUser, this.syncStatus));
   },
 
-  /**
-   * Garante que o vetor 'c' tenha as 10 posições mesmo vindo de versões anteriores
-   */
   ensureSchema(userObj) {
     if (!userObj.s || userObj.s.length < 4) {
       userObj.s = [
@@ -80,9 +71,6 @@ const NihongoDB = {
     return userObj;
   },
 
-  /**
-   * Carrega cache do navegador
-   */
   loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_DB);
@@ -98,9 +86,6 @@ const NihongoDB = {
     }
   },
 
-  /**
-   * Salva no navegador instantaneamente
-   */
   saveLocal() {
     try {
       localStorage.setItem(STORAGE_KEY_DB, JSON.stringify(this.data));
@@ -110,8 +95,61 @@ const NihongoDB = {
   },
 
   /**
-   * Alterna entre Você (u1) e Seu Amigo (u2)
+   * Obtém ou renova o Token de Autenticação Anônima (Validado por HTTP Referrer no Google Cloud)
    */
+  async getValidAuthToken() {
+    const apiKey = (this.firebaseApiKey || "").trim();
+    if (!apiKey || apiKey === "COLE_SUA_API_KEY_AQUI") return null;
+
+    // Se o token atual ainda é válido (com margem de 2 min), reutiliza sem gastar requisição
+    if (this.idToken && Date.now() < this.tokenExpiry) {
+      return this.idToken;
+    }
+
+    try {
+      // Se já temos refreshToken na sessão, renova o token
+      if (this.refreshToken) {
+        const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: `grant_type=refresh_token&refresh_token=${this.refreshToken}`
+        });
+        if (res.ok) {
+          const d = await res.json();
+          this.idToken = d.id_token;
+          this.refreshToken = d.refresh_token;
+          this.tokenExpiry = Date.now() + (parseInt(d.expires_in, 10) - 120) * 1000;
+          return this.idToken;
+        }
+      }
+
+      // Faz login anônimo silencioso
+      const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnSecureToken: true })
+      });
+      if (!res.ok) throw new Error("Falha na autenticação da API Key");
+      const data = await res.json();
+      this.idToken = data.idToken;
+      this.refreshToken = data.refreshToken;
+      this.tokenExpiry = Date.now() + (parseInt(data.expiresIn, 10) - 120) * 1000;
+      return this.idToken;
+    } catch (e) {
+      console.warn("Autenticação privada falhou:", e);
+      return null;
+    }
+  },
+
+  /**
+   * Monta a URL autenticada para o Realtime Database
+   */
+  async buildAuthUrl(path) {
+    const token = await this.getValidAuthToken();
+    const base = `${this.firebaseUrl}${path}`;
+    return token ? `${base}?auth=${token}` : base;
+  },
+
   setActiveUser(userKey) {
     if (userKey === "u1" || userKey === "u2") {
       this.activeUser = userKey;
@@ -120,9 +158,6 @@ const NihongoDB = {
     }
   },
 
-  /**
-   * Altera o nome de exibição do jogador atual
-   */
   setUserName(userKey, newName) {
     const clean = (newName || "").trim().slice(0, 18);
     if (!clean) return;
@@ -132,9 +167,6 @@ const NihongoDB = {
     this.notify();
   },
 
-  /**
-   * Configura a URL do Firebase Realtime Database
-   */
   async setFirebaseConfig(url) {
     let cleanUrl = (url || "").trim().replace(/\/+$/, "");
     if (cleanUrl && !cleanUrl.startsWith("https://")) {
@@ -155,15 +187,13 @@ const NihongoDB = {
     }
   },
 
-  /**
-   * Sincronização leve via REST JSON
-   */
   async pullFromFirebase() {
     if (!this.firebaseUrl) return;
     try {
       this.syncStatus = "syncing";
       this.notify();
-      const res = await fetch(`${this.firebaseUrl}/nd_duo.json`);
+      const targetUrl = await this.buildAuthUrl("/nd_duo.json");
+      const res = await fetch(targetUrl);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const remote = await res.json();
 
@@ -185,9 +215,6 @@ const NihongoDB = {
     this.notify();
   },
 
-  /**
-   * Faz o merge inteligente mantendo o maior progresso entre nuvem e local
-   */
   mergeUserProfile(uk, remoteUser) {
     const localUser = this.data[uk] || createEmptyUser(uk === "u1" ? "Jogador 1" : "Jogador 2");
     const rTotal = (remoteUser.s?.[0] || 0) + (remoteUser.s?.[1] || 0);
@@ -203,15 +230,13 @@ const NihongoDB = {
     }
   },
 
-  /**
-   * Envia apenas o nó do jogador ativo (Economiza metade da banda!)
-   */
   async pushUserToFirebase(userKey) {
     if (!this.firebaseUrl) return;
     try {
       this.syncStatus = "syncing";
       this.notify();
-      const res = await fetch(`${this.firebaseUrl}/nd_duo/${userKey}.json`, {
+      const targetUrl = await this.buildAuthUrl(`/nd_duo/${userKey}.json`);
+      const res = await fetch(targetUrl, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(this.data[userKey])
@@ -228,11 +253,13 @@ const NihongoDB = {
   async pushAllToFirebase() {
     if (!this.firebaseUrl) return;
     try {
-      await fetch(`${this.firebaseUrl}/nd_duo.json`, {
+      const targetUrl = await this.buildAuthUrl("/nd_duo.json");
+      const res = await fetch(targetUrl, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(this.data)
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       this.syncStatus = "online";
     } catch (e) {
       this.syncStatus = "error";
@@ -249,26 +276,17 @@ const NihongoDB = {
     }, 25000);
   },
 
-  /**
-   * Retorna data atual no formato inteiro compacto YYYYMMDD
-   */
   getTodayInt() {
     const d = new Date();
     return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
   },
 
-  /**
-   * Registra um acerto ou erro no perfil ativo e atualiza ofensiva (Streak)
-   * category: "hiragana" | "katakana" | "kanji" | "vocab" | "genki"
-   */
   recordAttempt(itemId, category, isCorrect) {
     const user = this.ensureSchema(this.data[this.activeUser]);
     const hitIdx = isCorrect ? 0 : 1;
 
-    // 1. Atualiza placar geral
     user.s[hitIdx] = (user.s[hitIdx] || 0) + 1;
 
-    // 2. Atualiza Streak de dias seguidos
     const today = this.getTodayInt();
     const lastDay = user.s[3] || 0;
     if (lastDay !== today) {
@@ -284,21 +302,16 @@ const NihongoDB = {
       user.s[3] = today;
     }
 
-    // 3. Atualiza contadores por categoria no vetor 'c'
     const catMap = { hiragana: 0, katakana: 2, kanji: 4, vocab: 6, genki: 8 };
     const baseIdx = catMap[category] ?? 6;
     user.c[baseIdx + hitIdx] = (user.c[baseIdx + hitIdx] || 0) + 1;
 
-    // 4. Atualiza histórico específico do item (w[itemId] = [hits, misses])
     if (!user.w[itemId]) user.w[itemId] = [0, 0];
     user.w[itemId][hitIdx] += 1;
 
     this.saveLocal();
   },
 
-  /**
-   * Salva o lote da sessão no Firebase ao finalizar ou pausar um treino
-   */
   async commitSession() {
     this.saveLocal();
     if (this.firebaseUrl) {
@@ -308,9 +321,6 @@ const NihongoDB = {
     }
   },
 
-  /**
-   * ALGORITMO SMART QUEUE (Repetição Espaçada & Priorização de Erros)
-   */
   buildSmartQueue(pool, maxItems = null) {
     const userW = this.data[this.activeUser]?.w || {};
 
@@ -339,9 +349,6 @@ const NihongoDB = {
       .map(x => x.item);
   },
 
-  /**
-   * Gera recomendações personalizadas para o usuário ativo com base nos pontos fracos
-   */
   getRecommendations(userKey = this.activeUser) {
     const user = this.data[userKey];
     const w = user?.w || {};
@@ -385,9 +392,6 @@ const NihongoDB = {
     };
   },
 
-  /**
-   * Calcula todas as métricas de comparação entre Você (u1) e Seu Amigo (u2)
-   */
   getComparisonMetrics() {
     const calcUserStats = (uk) => {
       const u = this.ensureSchema(this.data[uk]);
