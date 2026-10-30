@@ -1,17 +1,22 @@
 /**
- * NIHONGO DUO - db.js (Com Acesso Privado por Domínio + Firebase Anonymous Auth REST)
+ * NIHONGO DUO - db.js (Correção Definitiva de Auto-Sync, URL Sanitization e Token Cache)
  */
 
 const STORAGE_KEY_DB = "nd_compact_db_v1";
 const STORAGE_KEY_FB_URL = "nd_fb_url_v1";
 const STORAGE_KEY_FB_KEY = "nd_fb_key_v1";
 const STORAGE_KEY_ACTIVE_USER = "nd_active_user_v1";
+const SESSION_KEY_AUTH = "nd_fb_auth_session_v1";
 
-// 1. URL do seu Realtime Database:
+// 1. URL do seu Realtime Database (sem barra no final):
 const DEFAULT_FIREBASE_URL = "https://ninhou-65d0d-default-rtdb.firebaseio.com";
 
-// 2. COLE AQUI A SUA apiKey DO FIREBASE (Restrita ao domínio vicckitiki.github.io):
+// 2. Mantenha aqui a sua apiKey do Firebase (ou deixe vazio se as regras não exigirem auth != null):
 const DEFAULT_FIREBASE_API_KEY = "AIzaSyBoRJHLdVc-fC33JrMoC_eBIyBTf0jGYvI";
+
+function cleanFirebaseUrl(url) {
+  return (url || "").trim().replace(/\/+$/, "").replace(/\/nd_duo(\.json)?$/i, "");
+}
 
 function createEmptyUser(name) {
   return {
@@ -28,18 +33,23 @@ const NihongoDB = {
     u2: createEmptyUser("Jogador 2")
   },
   activeUser: localStorage.getItem(STORAGE_KEY_ACTIVE_USER) || "u1",
-  firebaseUrl: localStorage.getItem(STORAGE_KEY_FB_URL) || DEFAULT_FIREBASE_URL,
-  firebaseApiKey: localStorage.getItem(STORAGE_KEY_FB_KEY) || DEFAULT_FIREBASE_API_KEY,
+  firebaseUrl: cleanFirebaseUrl(localStorage.getItem(STORAGE_KEY_FB_URL) || DEFAULT_FIREBASE_URL),
+  firebaseApiKey: (localStorage.getItem(STORAGE_KEY_FB_KEY) || DEFAULT_FIREBASE_API_KEY).trim(),
   idToken: null,
   refreshToken: null,
   tokenExpiry: 0,
   syncStatus: "local",
+  isSyncing: false,
   listeners: [],
   pollTimer: null,
 
   async init() {
     this.loadLocal();
+    this.loadCachedAuthSession();
+
+    // Garante que a URL limpa fique salva no localStorage logo ao abrir
     if (this.firebaseUrl) {
+      localStorage.setItem(STORAGE_KEY_FB_URL, this.firebaseUrl);
       await this.pullFromFirebase();
       this.startRealtimePolling();
     }
@@ -95,19 +105,51 @@ const NihongoDB = {
   },
 
   /**
-   * Obtém ou renova o Token de Autenticação Anônima (Validado por HTTP Referrer no Google Cloud)
+   * Recupera o token salvo na sessão do navegador para evitar autenticações repetidas no F5
    */
-  async getValidAuthToken() {
+  loadCachedAuthSession() {
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY_AUTH);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.idToken = parsed.idToken || null;
+        this.refreshToken = parsed.refreshToken || null;
+        this.tokenExpiry = parsed.tokenExpiry || 0;
+      }
+    } catch (e) {}
+  },
+
+  saveCachedAuthSession() {
+    try {
+      sessionStorage.setItem(SESSION_KEY_AUTH, JSON.stringify({
+        idToken: this.idToken,
+        refreshToken: this.refreshToken,
+        tokenExpiry: this.tokenExpiry
+      }));
+    } catch (e) {}
+  },
+
+  clearAuthSession() {
+    this.idToken = null;
+    this.tokenExpiry = 0;
+    try {
+      sessionStorage.removeItem(SESSION_KEY_AUTH);
+    } catch (e) {}
+  },
+
+  /**
+   * Obtém ou renova o Token de Autenticação Anônima
+   */
+  async getValidAuthToken(forceRefresh = false) {
     const apiKey = (this.firebaseApiKey || "").trim();
     if (!apiKey || apiKey === "COLE_SUA_API_KEY_AQUI") return null;
 
-    // Se o token atual ainda é válido (com margem de 2 min), reutiliza sem gastar requisição
-    if (this.idToken && Date.now() < this.tokenExpiry) {
+    if (!forceRefresh && this.idToken && Date.now() < this.tokenExpiry) {
       return this.idToken;
     }
 
     try {
-      // Se já temos refreshToken na sessão, renova o token
+      // 1. Tenta renovar com refreshToken se existir
       if (this.refreshToken) {
         const res = await fetch(`https://securetoken.googleapis.com/v1/token?key=${apiKey}`, {
           method: "POST",
@@ -119,35 +161,54 @@ const NihongoDB = {
           this.idToken = d.id_token;
           this.refreshToken = d.refresh_token;
           this.tokenExpiry = Date.now() + (parseInt(d.expires_in, 10) - 120) * 1000;
+          this.saveCachedAuthSession();
           return this.idToken;
         }
       }
 
-      // Faz login anônimo silencioso
+      // 2. Faz login anônimo silencioso
       const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${apiKey}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ returnSecureToken: true })
       });
-      if (!res.ok) throw new Error("Falha na autenticação da API Key");
+      if (!res.ok) throw new Error(`Auth HTTP ${res.status}`);
       const data = await res.json();
       this.idToken = data.idToken;
       this.refreshToken = data.refreshToken;
       this.tokenExpiry = Date.now() + (parseInt(data.expiresIn, 10) - 120) * 1000;
+      this.saveCachedAuthSession();
       return this.idToken;
     } catch (e) {
-      console.warn("Autenticação privada falhou:", e);
+      console.warn("Aviso na autenticação anônima (tentando conexão direta):", e);
       return null;
     }
   },
 
   /**
-   * Monta a URL autenticada para o Realtime Database
+   * Executa requisição ao Firebase com retry automático caso o token tenha expirado (401)
    */
-  async buildAuthUrl(path) {
-    const token = await this.getValidAuthToken();
-    const base = `${this.firebaseUrl}${path}`;
-    return token ? `${base}?auth=${token}` : base;
+  async fetchWithAuthRetry(path, options = {}) {
+    const cleanBase = cleanFirebaseUrl(this.firebaseUrl);
+    let token = await this.getValidAuthToken(false);
+    let url = token ? `${cleanBase}${path}?auth=${token}` : `${cleanBase}${path}`;
+
+    let res = await fetch(url, options);
+
+    // Se deu 401 (token expirado/inválido), força renovação do token ou tenta sem token (caso regras públicas)
+    if (res.status === 401) {
+      this.clearAuthSession();
+      token = await this.getValidAuthToken(true);
+      url = token ? `${cleanBase}${path}?auth=${token}` : `${cleanBase}${path}`;
+      res = await fetch(url, options);
+
+      // Fallback final: se a regra do banco for pública mas um token antigo causou 401
+      if (res.status === 401 && token) {
+        res = await fetch(`${cleanBase}${path}`, options);
+      }
+    }
+
+    return res;
   },
 
   setActiveUser(userKey) {
@@ -168,7 +229,7 @@ const NihongoDB = {
   },
 
   async setFirebaseConfig(url) {
-    let cleanUrl = (url || "").trim().replace(/\/+$/, "");
+    const cleanUrl = cleanFirebaseUrl(url);
     if (cleanUrl && !cleanUrl.startsWith("https://")) {
       throw new Error("A URL do Firebase deve começar com https://");
     }
@@ -179,7 +240,7 @@ const NihongoDB = {
 
     if (cleanUrl) {
       await this.pullFromFirebase();
-      await this.pushAllToFirebase();
+      await this.pushUserToFirebase(this.activeUser);
       this.startRealtimePolling();
     } else {
       this.syncStatus = "local";
@@ -188,12 +249,13 @@ const NihongoDB = {
   },
 
   async pullFromFirebase() {
-    if (!this.firebaseUrl) return;
+    if (!this.firebaseUrl || this.isSyncing) return;
+    this.isSyncing = true;
     try {
       this.syncStatus = "syncing";
       this.notify();
-      const targetUrl = await this.buildAuthUrl("/nd_duo.json");
-      const res = await fetch(targetUrl);
+
+      const res = await this.fetchWithAuthRetry("/nd_duo.json");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const remote = await res.json();
 
@@ -204,13 +266,17 @@ const NihongoDB = {
           }
         });
         this.saveLocal();
+        this.syncStatus = "online";
       } else {
+        this.isSyncing = false;
         await this.pushAllToFirebase();
+        return;
       }
-      this.syncStatus = "online";
     } catch (e) {
       console.warn("Falha ao sincronizar com Firebase:", e);
       this.syncStatus = "error";
+    } finally {
+      this.isSyncing = false;
     }
     this.notify();
   },
@@ -235,8 +301,7 @@ const NihongoDB = {
     try {
       this.syncStatus = "syncing";
       this.notify();
-      const targetUrl = await this.buildAuthUrl(`/nd_duo/${userKey}.json`);
-      const res = await fetch(targetUrl, {
+      const res = await this.fetchWithAuthRetry(`/nd_duo/${userKey}.json`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(this.data[userKey])
@@ -253,8 +318,7 @@ const NihongoDB = {
   async pushAllToFirebase() {
     if (!this.firebaseUrl) return;
     try {
-      const targetUrl = await this.buildAuthUrl("/nd_duo.json");
-      const res = await fetch(targetUrl, {
+      const res = await this.fetchWithAuthRetry("/nd_duo.json", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(this.data)
@@ -262,6 +326,7 @@ const NihongoDB = {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       this.syncStatus = "online";
     } catch (e) {
+      console.warn("Erro ao enviar banco completo para o Firebase:", e);
       this.syncStatus = "error";
     }
     this.notify();
@@ -270,7 +335,7 @@ const NihongoDB = {
   startRealtimePolling() {
     if (this.pollTimer) clearInterval(this.pollTimer);
     this.pollTimer = setInterval(() => {
-      if (document.visibilityState === "visible" && this.firebaseUrl) {
+      if (document.visibilityState === "visible" && this.firebaseUrl && !this.isSyncing) {
         this.pullFromFirebase();
       }
     }, 25000);
