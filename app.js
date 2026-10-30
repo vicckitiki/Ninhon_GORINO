@@ -1142,6 +1142,8 @@ const App = {
    * ========================================================================== */
   openSyncModal() {
     document.getElementById("input-firebase-url").value = window.NihongoDB.firebaseUrl || "";
+    const secretInput = document.getElementById("input-room-secret");
+    if (secretInput) secretInput.value = window.NihongoDB.roomSecret || "";
     document.getElementById("modal-sync").classList.remove("hidden");
   },
 
@@ -1151,14 +1153,14 @@ const App = {
 
   async saveFirebaseUrl() {
     const url = document.getElementById("input-firebase-url").value;
+    const secret = document.getElementById("input-room-secret")?.value || "";
     try {
-      await window.NihongoDB.setFirebaseConfig(url);
+      await window.NihongoDB.setFirebaseConfig(url, secret);
       this.closeSyncModal();
     } catch (e) {
-      alert(e.message || "URL inválida.");
+      alert(e.message || "Configuração inválida.");
     }
   },
-
   exportBackup() {
     const json = window.NihongoDB.exportJSON();
     navigator.clipboard.writeText(json).then(() => {
